@@ -1,0 +1,7 @@
+[dependencies]
+tokio = "*"
+
+[workspace]
+members = [
+    "core"
+]

@@ -1,15 +1,14 @@
-[workspace]
-members = [
-  ".",
-  "hyades-core"
-]
-
 [package]
-name = "hyades"
+name = "hyades-core"
 version = "0.0.1"
-license = "mit OR apache-2.0"
+license = "mit or apache-2.0"
 repository = "https://github.com/abhijeetbhagat/hyades"
 description = "implementation of the SCTP protocol in rust"
 edition = "2018"
 authors = ["abhi"]
 
+[dependencies]
+tokio = "*"
+crc32c = "0.6.0"
+rand = "0.8.3"
+thiserror = "1.0.24"

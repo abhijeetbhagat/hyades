@@ -6,18 +6,25 @@ enum ChunkType {
     CookieEcho,
 }
 
-trait Chunk {
+pub trait Chunk {
     fn to_bytes(&self) -> &[u8];
 }
 
-struct ChunkHeader {
+impl From<Chunk> for &[u8] {
+    fn from<Chunk>(self) -> Self {
+        // ?
+    }
+}
+
+#[derive(Debug)]
+pub struct ChunkHeader {
     chunk_type: u8,
     flags: u8,
     length: u16,
 }
 
 impl ChunkHeader {
-    fn new(chunk_type: u8, flags: u8, length: u16) -> Self {
+    pub fn new(chunk_type: u8, flags: u8, length: u16) -> Self {
         Self {
             chunk_type,
             flags,
@@ -47,18 +54,18 @@ impl ChunkHeader {
 */
 
 #[derive(Clone, Debug)]
-struct Init {
+pub struct Init {
     header: ChunkHeader,
     init_tag: u32,
     a_rwnd: u32,
     num_ob_streams: u16,
     num_ib_streams: u16,
     init_tsn: u32,
-    optional_params: Option<[u8]>,
+    optional_params: Option<Vec<u8>>,
 }
 
 impl Init {
-    fn new(
+    pub fn new(
         init_tag: u32,
         a_rwnd: u32,
         num_ob_streams: u16,
@@ -66,7 +73,7 @@ impl Init {
         optional_params: Option<Vec<u8>>,
     ) -> Self {
         Self {
-            header: ChunkHeader::new(1, 0, 20 + optional_params.map_or(0, |v| v.len())),
+            header: ChunkHeader::new(1, 0, 20 + optional_params.map_or(0, |v| v.len() as u16)),
             init_tag,
             a_rwnd,
             num_ob_streams,
@@ -84,14 +91,14 @@ impl Chunk for Init {
 }
 
 #[derive(Clone, Debug)]
-struct InitAck {
+pub struct InitAck {
     header: ChunkHeader,
     init_tag: u32,
     a_rwnd: u32,
     num_ob_streams: u16,
     num_ib_streams: u16,
     init_tsn: u32,
-    optional_params: Option<[u8]>,
+    optional_params: Option<Vec<u8>>,
 }
 
 impl InitAck {
@@ -120,3 +127,12 @@ impl Chunk for InitAck {
     }
 }
 
+pub struct Data {
+
+}
+
+impl Chunk for Data {
+    fn to_bytes(&self) -> &[u8] {
+        todo!()
+    }
+}

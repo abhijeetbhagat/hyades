@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-enum SCTPError {
+pub enum SCTPError {
     #[error("error setting up an association")]
     AssociationSetupError,
     #[error("error terminating association")]

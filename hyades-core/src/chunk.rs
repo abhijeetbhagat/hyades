@@ -7,12 +7,12 @@ enum ChunkType {
 }
 
 pub trait Chunk {
-    fn to_bytes(&self) -> &[u8];
+    fn get_bytes(&self) -> Vec<u8>;
 }
 
-impl From<Chunk> for &[u8] {
-    fn from<Chunk>(self) -> Self {
-        // ?
+impl From<&Box<dyn Chunk>> for Vec<u8> {
+    fn from(b: &Box<dyn Chunk>) -> Self {
+        b.get_bytes()
     }
 }
 
@@ -30,6 +30,12 @@ impl ChunkHeader {
             flags,
             length,
         }
+    }
+}
+
+impl From<ChunkHeader> for [u8; 4] {
+    fn from(ch: ChunkHeader) -> Self {
+        [ch.chunk_type, ch.flags, ((ch.length | 0x0000) >> 8) as u8, (ch.length & 0x00ff)  as u8]
     }
 }
 
@@ -85,8 +91,18 @@ impl Init {
 }
 
 impl Chunk for Init {
-    fn to_bytes(&self) -> &[u8] {
-        todo!()
+    fn get_bytes(&self) -> Vec<u8> {
+        let mut v = vec![];
+        v.extend(<[u8;4]>::from(self.header));
+        v.extend(self.init_tag.to_be_bytes());
+        v.extend(self.a_rwnd.to_be_bytes());
+        v.extend(self.num_ob_streams.to_be_bytes());
+        v.extend(self.num_ib_streams.to_be_bytes());
+        v.extend(self.init_tsn.to_be_bytes());
+        if let Some(params) = self.optional_params {
+           v.extend(params);
+        }
+        v
     }
 }
 
@@ -110,7 +126,7 @@ impl InitAck {
         optional_params: Option<Vec<u8>>,
     ) -> Self {
         Self {
-            header: ChunkHeader::new(1, 0, 20 + optional_params.map_or(0, |v| v.len())),
+            header: ChunkHeader::new(1, 0, 20 + optional_params.map_or(0, |v| v.len() as u16)),
             init_tag,
             a_rwnd,
             num_ob_streams,
@@ -122,8 +138,18 @@ impl InitAck {
 }
 
 impl Chunk for InitAck {
-    fn to_bytes(&self) -> &[u8] {
-        todo!()
+    fn get_bytes(&self) -> Vec<u8> {
+        let mut v = vec![];
+        v.extend(<[u8;4]>::from(self.header));
+        v.extend(self.init_tag.to_be_bytes());
+        v.extend(self.a_rwnd.to_be_bytes());
+        v.extend(self.num_ob_streams.to_be_bytes());
+        v.extend(self.num_ib_streams.to_be_bytes());
+        v.extend(self.init_tsn.to_be_bytes());
+        if let Some(params) = self.optional_params {
+           v.extend(params);
+        }
+        v
     }
 }
 
@@ -132,7 +158,7 @@ pub struct Data {
 }
 
 impl Chunk for Data {
-    fn to_bytes(&self) -> &[u8] {
+    fn get_bytes(&self) -> Vec<u8> {
         todo!()
     }
 }

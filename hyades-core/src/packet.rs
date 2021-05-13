@@ -1,7 +1,7 @@
+use crate::chunk::Chunk;
 use crc32c;
-use self::chunk::Chunk;
 
-struct CommonHeader {
+pub struct CommonHeader {
     src_port: u16,
     dst_port: u16,
     ver_tag: u32,
@@ -19,13 +19,25 @@ impl Default for CommonHeader {
     }
 }
 
-struct Packet {
+/// An SCTP Packet
+pub struct Packet {
     header: CommonHeader,
     chunks: Vec<Box<dyn Chunk>>,
 }
 
+impl From<&Packet> for Vec<u8> {
+    fn from(p: &Packet) -> Self {
+        let mut v = Vec::with_capacity(p.chunks.len());
+        for chunk in &p.chunks {
+            v.extend(Vec::<u8>::from(chunk));
+        }
+        v
+    }
+}
+
 impl Packet {
-    fn new(src_port: u16, dst_port: u16) -> Self {
+    /// Creates a new `Packet`
+    pub fn new(src_port: u16, dst_port: u16) -> Self {
         let mut header = CommonHeader::default();
         header.src_port = src_port;
         header.dst_port = dst_port;
@@ -33,21 +45,13 @@ impl Packet {
             header,
             chunks: Vec::new(),
         };
-        let checksum = crc32c::crc32c(packet.to_bytes());
+        let checksum = crc32c::crc32c(&Vec::<u8>::from(&packet));
         packet.header.checksum = checksum;
         packet
     }
 
-    pub fn to_bytes(&self) -> &[u8] {
-        unsafe {
-            std::slice::from_raw_parts(
-                (&self as *const Packet) as *const u8,
-                std::mem::size_of::<Packet>(),
-            )
-        }
-    }
-
-    pub fn add_chunk(&mut self, chunk: Chunk) {
+    /// Add a chunk to this packet
+    pub fn add_chunk(&mut self, chunk: Box<dyn Chunk>) {
         self.chunks.push(chunk);
     }
 }

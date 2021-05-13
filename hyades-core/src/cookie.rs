@@ -1,5 +1,7 @@
 struct Cookie {}
 
 impl Cookie {
-    fn new() -> Self {}
+    pub fn new() -> Self {
+        todo!()
+    }
 }

@@ -1,3 +1,5 @@
+use std::convert::TryFrom;
+
 #[derive(Clone, Debug)]
 enum ChunkType {
     Init,
@@ -16,7 +18,7 @@ impl From<&Box<dyn Chunk>> for Vec<u8> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ChunkHeader {
     chunk_type: u8,
     flags: u8,
@@ -33,9 +35,14 @@ impl ChunkHeader {
     }
 }
 
-impl From<ChunkHeader> for [u8; 4] {
-    fn from(ch: ChunkHeader) -> Self {
-        [ch.chunk_type, ch.flags, ((ch.length | 0x0000) >> 8) as u8, (ch.length & 0x00ff)  as u8]
+impl From<&ChunkHeader> for [u8; 4] {
+    fn from(ch: &ChunkHeader) -> Self {
+        [
+            ch.chunk_type,
+            ch.flags,
+            ((ch.length | 0x0000) >> 8) as u8,
+            (ch.length & 0x00ff) as u8,
+        ]
     }
 }
 
@@ -90,17 +97,35 @@ impl Init {
     }
 }
 
+impl From<&[u8; 1024]> for Init {
+    fn from(buf: &[u8; 1024]) -> Self {
+        Self {
+            header: ChunkHeader::new(
+                buf[0],
+                buf[1],
+                u16::from_be_bytes(<[u8; 2]>::try_from(&buf[2..=3]).unwrap()),
+            ),
+            init_tag: u32::from_be_bytes(<[u8; 4]>::try_from(&buf[4..=7]).unwrap()),
+            a_rwnd: u32::from_be_bytes(<[u8; 4]>::try_from(&buf[8..=11]).unwrap()),
+            num_ob_streams: u16::from_be_bytes(<[u8; 2]>::try_from(&buf[12..=13]).unwrap()),
+            num_ib_streams: u16::from_be_bytes(<[u8; 2]>::try_from(&buf[14..=15]).unwrap()),
+            init_tsn: u32::from_be_bytes(<[u8; 4]>::try_from(&buf[16..=19]).unwrap()),
+            optional_params: None,
+        }
+    }
+}
+
 impl Chunk for Init {
     fn get_bytes(&self) -> Vec<u8> {
         let mut v = vec![];
-        v.extend(<[u8;4]>::from(self.header));
+        v.extend(<[u8; 4]>::from(&self.header));
         v.extend(self.init_tag.to_be_bytes());
         v.extend(self.a_rwnd.to_be_bytes());
         v.extend(self.num_ob_streams.to_be_bytes());
         v.extend(self.num_ib_streams.to_be_bytes());
         v.extend(self.init_tsn.to_be_bytes());
-        if let Some(params) = self.optional_params {
-           v.extend(params);
+        if let Some(params) = &self.optional_params {
+            v.extend(params);
         }
         v
     }
@@ -140,22 +165,20 @@ impl InitAck {
 impl Chunk for InitAck {
     fn get_bytes(&self) -> Vec<u8> {
         let mut v = vec![];
-        v.extend(<[u8;4]>::from(self.header));
+        v.extend(<[u8; 4]>::from(&self.header));
         v.extend(self.init_tag.to_be_bytes());
         v.extend(self.a_rwnd.to_be_bytes());
         v.extend(self.num_ob_streams.to_be_bytes());
         v.extend(self.num_ib_streams.to_be_bytes());
         v.extend(self.init_tsn.to_be_bytes());
-        if let Some(params) = self.optional_params {
-           v.extend(params);
+        if let Some(params) = &self.optional_params {
+            v.extend(params);
         }
         v
     }
 }
 
-pub struct Data {
-
-}
+pub struct Data {}
 
 impl Chunk for Data {
     fn get_bytes(&self) -> Vec<u8> {

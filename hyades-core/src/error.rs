@@ -14,4 +14,10 @@ pub enum SCTPError {
     SocketSendError,
     #[error("error recving data from remote addr")]
     SocketRecvError,
+    #[error("invalid remote address/port")]
+    InvalidRemoteAddress,
+    #[error("invalid local address/port")]
+    InvalidLocalAddress,
+    #[error("listener error")]
+    SocketListenerError,
 }

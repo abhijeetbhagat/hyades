@@ -1,6 +1,7 @@
 use crate::error::SCTPError;
 use std::net::SocketAddr;
 use tokio::net::UdpSocket;
+use log::info;
 
 pub struct Stream {
     sock: UdpSocket,
@@ -8,17 +9,23 @@ pub struct Stream {
 
 impl Stream {
     /// Creates a new UDP stream
-    pub async fn new(remote_addr: impl AsRef<str>) -> Result<Self, SCTPError> {
-        let sockaddr: SocketAddr = remote_addr
+    pub async fn new(local_addr: impl AsRef<str>, remote_addr: impl AsRef<str>) -> Result<Self, SCTPError> {
+        let local_sockaddr: SocketAddr = local_addr
+            .as_ref()
+            .parse()
+            .map_err(|_| SCTPError::InvalidLocalAddress)?;
+
+        let remote_sockaddr: SocketAddr = remote_addr
             .as_ref()
             .parse()
             .map_err(|_| SCTPError::InvalidRemoteAddress)?;
-        let sock = UdpSocket::bind(sockaddr)
+
+        let sock = UdpSocket::bind(local_sockaddr)
             .await
             .map_err(|_| SCTPError::SocketBindError)?;
 
         // Set default remote addr to sent data to/recv data from
-        sock.connect(sockaddr)
+        sock.connect(remote_sockaddr)
             .await
             .map_err(|_| SCTPError::SocketConnectError)?;
 

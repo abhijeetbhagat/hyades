@@ -164,7 +164,27 @@ impl From<Vec<u8>> for Init {
             //                  read length number of bytes from buf
             //                  construct a param and push it into the optional_params vec
             //                  repeat
-            optional_params: None,
+            optional_params: {
+                let mut offset = 20usize;
+                let mut v = vec![];
+
+                while offset < buf.len() {
+                    let param_type= u16::from_be_bytes(<[u8; 2]>::try_from(&buf[offset..=offset+1]).unwrap());
+                    offset += 2;
+                    let len= u16::from_be_bytes(<[u8; 2]>::try_from(&buf[offset..=offset+1]).unwrap());
+                    offset += 2;
+                    let value = &buf[offset .. offset + len as usize];
+                        
+                    v.push(Parameter {
+                        param_type,
+                        len,
+                        value: value.to_vec()
+                    });
+
+                    offset += len as usize;
+                }
+                Some(v)
+            }
         }
     }
 }

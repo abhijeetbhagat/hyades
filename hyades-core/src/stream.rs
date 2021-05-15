@@ -1,7 +1,7 @@
 use crate::error::SCTPError;
+use log::info;
 use std::net::SocketAddr;
 use tokio::net::UdpSocket;
-use log::info;
 
 pub struct Stream {
     sock: UdpSocket,
@@ -9,27 +9,32 @@ pub struct Stream {
 
 impl Stream {
     /// Creates a new UDP stream
-    pub async fn new(local_addr: impl AsRef<str>, remote_addr: impl AsRef<str>) -> Result<Self, SCTPError> {
+    pub async fn new(local_addr: impl AsRef<str>) -> Result<Self, SCTPError> {
         let local_sockaddr: SocketAddr = local_addr
             .as_ref()
             .parse()
             .map_err(|_| SCTPError::InvalidLocalAddress)?;
 
+        let sock = UdpSocket::bind(local_sockaddr)
+            .await
+            .map_err(|_| SCTPError::SocketBindError)?;
+
+        Ok(Self { sock })
+    }
+
+    pub async fn connect(self, remote_addr: impl AsRef<str>) -> Result<Stream, SCTPError> {
         let remote_sockaddr: SocketAddr = remote_addr
             .as_ref()
             .parse()
             .map_err(|_| SCTPError::InvalidRemoteAddress)?;
 
-        let sock = UdpSocket::bind(local_sockaddr)
-            .await
-            .map_err(|_| SCTPError::SocketBindError)?;
-
         // Set default remote addr to sent data to/recv data from
-        sock.connect(remote_sockaddr)
+        self.sock
+            .connect(remote_sockaddr)
             .await
             .map_err(|_| SCTPError::SocketConnectError)?;
 
-        Ok(Self { sock })
+        Ok(self)
     }
 
     /// Send data to remote peer

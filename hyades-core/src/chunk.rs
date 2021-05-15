@@ -127,25 +127,6 @@ impl Init {
     }
 }
 
-// TODO abhi - this is not needed
-impl From<&[u8; 1024]> for Init {
-    fn from(buf: &[u8; 1024]) -> Self {
-        Self {
-            header: ChunkHeader::new(
-                buf[0],
-                buf[1],
-                u16::from_be_bytes(<[u8; 2]>::try_from(&buf[2..=3]).unwrap()),
-            ),
-            init_tag: u32::from_be_bytes(<[u8; 4]>::try_from(&buf[4..=7]).unwrap()),
-            a_rwnd: u32::from_be_bytes(<[u8; 4]>::try_from(&buf[8..=11]).unwrap()),
-            num_ob_streams: u16::from_be_bytes(<[u8; 2]>::try_from(&buf[12..=13]).unwrap()),
-            num_ib_streams: u16::from_be_bytes(<[u8; 2]>::try_from(&buf[14..=15]).unwrap()),
-            init_tsn: u32::from_be_bytes(<[u8; 4]>::try_from(&buf[16..=19]).unwrap()),
-            optional_params: None,
-        }
-    }
-}
-
 impl From<Vec<u8>> for Init {
     fn from(buf: Vec<u8>) -> Self {
         Self {

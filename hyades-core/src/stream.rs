@@ -46,14 +46,30 @@ impl Stream {
         Ok(())
     }
 
-    /// Recv data from remote peer
+    /// Recv data from remote peer this stream is already connected to
     pub async fn recv(&self) -> Result<Vec<u8>, SCTPError> {
         // TODO abhi - set min vec capacity from SCTP RFC
-        let mut buf = Vec::new();
-        self.sock
+        let mut buf = [0u8; 1024]; // Vec::new();
+
+        let len = self.sock
             .recv(&mut buf)
             .await
             .map_err(|_| SCTPError::SocketRecvError)?;
-        Ok(buf)
+        Ok(buf[..len].to_vec())
+    }
+
+    /// Recv data from a remote peer this stream isn't connected to
+    pub async fn recv_from(&self) -> Result<(Vec<u8>, SocketAddr), SCTPError> {
+        // TODO abhi - set min vec capacity from SCTP RFC
+        let mut buf = [0u8; 1024]; // Vec::new();
+        let (len, addr) = self.sock
+            .recv_from(&mut buf)
+            .await
+            .map_err(|_| SCTPError::SocketRecvError)?;
+        
+        self.sock.connect(addr).await
+            .map_err(|_| SCTPError::SocketConnectError)?;
+
+        Ok((buf[..len].to_vec(), addr))
     }
 }

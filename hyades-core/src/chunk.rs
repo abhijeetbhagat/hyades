@@ -326,5 +326,32 @@ fn test_init_conversion() {
     let param = &params[0];
     assert!(param.param_type == 7);
     assert!(param.len == 4);
-    assert!(&param.value == &vec![0,1,0,1]);
+    assert!(param.value == vec![0,1,0,1]);
+}
+
+#[test]
+fn test_init_conversion_2_() {
+    let buf = vec![1u8, 1, 0, 1,
+        0,0,0,1,
+        0,0,0,1,
+        0,1,
+        0,1,
+        0,0,0,1,
+        // optional params
+        // param 1
+        0,7,0,4,
+        0,1,0,1,
+        // param 2
+        0,11,0,4,
+        0,1,0,1
+    ];
+    let chunk = Init::from(buf);
+    assert!(chunk.num_ib_streams == 1);
+    assert!(chunk.optional_params.is_some());
+    let params = chunk.optional_params.unwrap();
+    assert!(params.len() == 2);
+    let param = &params[1];
+    assert!(param.param_type == 11);
+    assert!(param.len == 4);
+    assert!(param.value == vec![0,1,0,1]);
 }

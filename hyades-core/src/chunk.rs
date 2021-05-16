@@ -63,7 +63,7 @@ impl From<&ChunkHeader> for [u8; 4] {
 pub struct Parameter {
     param_type: u16,
     len: u16,
-    value: Vec<u8>
+    value: Vec<u8>,
 }
 
 impl From<&Parameter> for Vec<u8> {
@@ -150,22 +150,24 @@ impl From<Vec<u8>> for Init {
                 let mut v = vec![];
 
                 while offset < buf.len() {
-                    let param_type= u16::from_be_bytes(<[u8; 2]>::try_from(&buf[offset..=offset+1]).unwrap());
+                    let param_type =
+                        u16::from_be_bytes(<[u8; 2]>::try_from(&buf[offset..=(offset + 1)]).unwrap());
                     offset += 2;
-                    let len= u16::from_be_bytes(<[u8; 2]>::try_from(&buf[offset..=offset+1]).unwrap());
+                    let len =
+                        u16::from_be_bytes(<[u8; 2]>::try_from(&buf[offset..=(offset + 1)]).unwrap());
                     offset += 2;
-                    let value = &buf[offset .. offset + len as usize];
-                        
+                    let value = &buf[offset..offset + len as usize];
+
                     v.push(Parameter {
                         param_type,
                         len,
-                        value: value.to_vec()
+                        value: value.to_vec(),
                     });
 
                     offset += len as usize;
                 }
                 Some(v)
-            }
+            },
         }
     }
 }
@@ -302,4 +304,27 @@ impl Chunk for Data {
     fn get_bytes(&self) -> Vec<u8> {
         todo!()
     }
+}
+
+#[test]
+fn test_init_conversion() {
+    let buf = vec![1u8, 1, 0, 1,
+        0,0,0,1,
+        0,0,0,1,
+        0,1,
+        0,1,
+        0,0,0,1,
+        // optional params
+        0,7,0,4,
+        0,1,0,1
+    ];
+    let chunk = Init::from(buf);
+    assert!(chunk.num_ib_streams == 1);
+    assert!(chunk.optional_params.is_some());
+    let params = chunk.optional_params.unwrap();
+    assert!(params.len() == 1);
+    let param = &params[0];
+    assert!(param.param_type == 7);
+    assert!(param.len == 4);
+    assert!(&param.value == &vec![0,1,0,1]);
 }

@@ -116,13 +116,17 @@ impl Init {
         optional_params: Option<Vec<Parameter>>,
     ) -> Self {
         Self {
-            header: ChunkHeader::new(1, 0, 20 + optional_params.map_or(0, |v| v.len() as u16)),
+            header: ChunkHeader::new(
+                1,
+                0,
+                20 + optional_params.as_ref().map_or(0, |v| *(&v.len()) as u16),
+            ),
             init_tag,
             a_rwnd,
             num_ob_streams,
             num_ib_streams,
             init_tsn: init_tag,
-            optional_params: None,
+            optional_params,
         }
     }
 }
@@ -147,26 +151,33 @@ impl From<Vec<u8>> for Init {
             //                  repeat
             optional_params: {
                 let mut offset = 20usize;
-                let mut v = vec![];
+                if offset == buf.len() - 1 {
+                    None
+                } else {
+                    let mut v = vec![];
 
-                while offset < buf.len() {
-                    let param_type =
-                        u16::from_be_bytes(<[u8; 2]>::try_from(&buf[offset..=(offset + 1)]).unwrap());
-                    offset += 2;
-                    let len =
-                        u16::from_be_bytes(<[u8; 2]>::try_from(&buf[offset..=(offset + 1)]).unwrap());
-                    offset += 2;
-                    let value = &buf[offset..offset + len as usize];
+                    while offset < buf.len() {
+                        let param_type = u16::from_be_bytes(
+                            <[u8; 2]>::try_from(&buf[offset..=(offset + 1)]).unwrap(),
+                        );
+                        offset += 2;
+                        let len = u16::from_be_bytes(
+                            <[u8; 2]>::try_from(&buf[offset..=(offset + 1)]).unwrap(),
+                        );
+                        offset += 2;
+                        let value = &buf[offset..offset + len as usize];
 
-                    v.push(Parameter {
-                        param_type,
-                        len,
-                        value: value.to_vec(),
-                    });
+                        v.push(Parameter {
+                            param_type,
+                            len,
+                            value: value.to_vec(),
+                        });
 
-                    offset += len as usize;
+                        offset += len as usize;
+                    }
+
+                    Some(v)
                 }
-                Some(v)
             },
         }
     }
@@ -207,7 +218,7 @@ impl InitAck {
             header: ChunkHeader::new(
                 2,
                 0,
-                20 + init.optional_params.map_or(0, |v| v.len() as u16),
+                20
             ),
             init_tag: init.init_tag,
             a_rwnd: init.a_rwnd,
@@ -232,7 +243,36 @@ impl From<Vec<u8>> for InitAck {
             num_ob_streams: u16::from_be_bytes(<[u8; 2]>::try_from(&buf[12..=13]).unwrap()),
             num_ib_streams: u16::from_be_bytes(<[u8; 2]>::try_from(&buf[14..=15]).unwrap()),
             init_tsn: u32::from_be_bytes(<[u8; 4]>::try_from(&buf[16..=19]).unwrap()),
-            optional_params: None,
+            optional_params: {
+                let mut offset = 20usize;
+                if offset == buf.len() - 1 {
+                    None
+                } else {
+                    let mut v = vec![];
+
+                    while offset < buf.len() {
+                        let param_type = u16::from_be_bytes(
+                            <[u8; 2]>::try_from(&buf[offset..=(offset + 1)]).unwrap(),
+                        );
+                        offset += 2;
+                        let len = u16::from_be_bytes(
+                            <[u8; 2]>::try_from(&buf[offset..=(offset + 1)]).unwrap(),
+                        );
+                        offset += 2;
+                        let value = &buf[offset..offset + len as usize];
+
+                        v.push(Parameter {
+                            param_type,
+                            len,
+                            value: value.to_vec(),
+                        });
+
+                        offset += len as usize;
+                    }
+
+                    Some(v)
+                }
+            },
         }
     }
 }
@@ -308,15 +348,9 @@ impl Chunk for Data {
 
 #[test]
 fn test_init_conversion() {
-    let buf = vec![1u8, 1, 0, 1,
-        0,0,0,1,
-        0,0,0,1,
-        0,1,
-        0,1,
-        0,0,0,1,
-        // optional params
-        0,7,0,4,
-        0,1,0,1
+    let buf = vec![
+        1u8, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, // optional params
+        0, 7, 0, 4, 0, 1, 0, 1,
     ];
     let chunk = Init::from(buf);
     assert!(chunk.num_ib_streams == 1);
@@ -326,24 +360,17 @@ fn test_init_conversion() {
     let param = &params[0];
     assert!(param.param_type == 7);
     assert!(param.len == 4);
-    assert!(param.value == vec![0,1,0,1]);
+    assert!(param.value == vec![0, 1, 0, 1]);
 }
 
 #[test]
-fn test_init_conversion_2_() {
-    let buf = vec![1u8, 1, 0, 1,
-        0,0,0,1,
-        0,0,0,1,
-        0,1,
-        0,1,
-        0,0,0,1,
+fn test_init_conversion_2() {
+    let buf = vec![
+        1u8, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1,
         // optional params
         // param 1
-        0,7,0,4,
-        0,1,0,1,
-        // param 2
-        0,11,0,4,
-        0,1,0,1
+        0, 7, 0, 4, 0, 1, 0, 1, // param 2
+        0, 11, 0, 4, 0, 1, 0, 1,
     ];
     let chunk = Init::from(buf);
     assert!(chunk.num_ib_streams == 1);
@@ -353,5 +380,16 @@ fn test_init_conversion_2_() {
     let param = &params[1];
     assert!(param.param_type == 11);
     assert!(param.len == 4);
-    assert!(param.value == vec![0,1,0,1]);
+    assert!(param.value == vec![0, 1, 0, 1]);
+}
+
+#[test]
+fn test_init_conversion_with_no_params() {
+    let buf = vec![
+        1u8, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1,
+        // no optional params
+    ];
+    let chunk = Init::from(buf);
+    assert!(chunk.num_ib_streams == 1);
+    assert!(chunk.optional_params.is_none());
 }

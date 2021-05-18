@@ -60,16 +60,51 @@ impl From<&ChunkHeader> for [u8; 4] {
 */
 
 #[derive(Clone, Debug)]
+pub enum ParamType {
+    StateCookie,
+    Invalid
+    // TODO abhi - add other params as and when required
+}
+
+#[derive(Clone, Debug)]
 pub struct Parameter {
-    param_type: u16,
+    param_type: ParamType,
     len: u16,
     value: Vec<u8>,
+}
+
+impl Parameter {
+    pub fn new(param_type: ParamType, value: Vec<u8>) -> Self {
+        Self {
+            param_type,
+            len: value.len() as u16,
+            value
+        }
+    }
+}
+
+impl From<&ParamType> for u16 {
+    fn from(param_type: &ParamType) -> Self {
+        match param_type {
+            ParamType::StateCookie => 7,
+            ParamType::Invalid => 0,
+        }
+    }
+}
+
+impl From<u16> for ParamType {
+    fn from(param_type: u16) -> Self {
+        match param_type {
+            7 => ParamType::StateCookie,
+            _ => ParamType::Invalid
+        }
+    }
 }
 
 impl From<&Parameter> for Vec<u8> {
     fn from(p: &Parameter) -> Self {
         let mut v = vec![];
-        v.extend(p.param_type.to_be_bytes());
+        v.extend(u16::from(&p.param_type).to_be_bytes());
         v.extend(p.len.to_be_bytes());
         v.extend(&p.value);
         v
@@ -144,11 +179,12 @@ impl From<Vec<u8>> for Init {
             num_ob_streams: u16::from_be_bytes(<[u8; 2]>::try_from(&buf[12..=13]).unwrap()),
             num_ib_streams: u16::from_be_bytes(<[u8; 2]>::try_from(&buf[14..=15]).unwrap()),
             init_tsn: u32::from_be_bytes(<[u8; 4]>::try_from(&buf[16..=19]).unwrap()),
-            // TODO abhi - while we haven't reached the end of the buffer:
-            //                  parse the length of the param
-            //                  read length number of bytes from buf
-            //                  construct a param and push it into the optional_params vec
-            //                  repeat
+            
+            // while we haven't reached the end of the buffer:
+            //      parse the length of the param
+            //      read length number of bytes from buf
+            //      construct a param and push it into the optional_params vec
+            //      repeat
             optional_params: {
                 let mut offset = 20usize;
                 if offset == buf.len() - 1 {
@@ -157,9 +193,9 @@ impl From<Vec<u8>> for Init {
                     let mut v = vec![];
 
                     while offset < buf.len() {
-                        let param_type = u16::from_be_bytes(
+                        let param_type = ParamType::from(u16::from_be_bytes(
                             <[u8; 2]>::try_from(&buf[offset..=(offset + 1)]).unwrap(),
-                        );
+                        ));
                         offset += 2;
                         let len = u16::from_be_bytes(
                             <[u8; 2]>::try_from(&buf[offset..=(offset + 1)]).unwrap(),
@@ -228,6 +264,12 @@ impl InitAck {
             optional_params: None,
         }
     }
+
+    pub fn add_param(&mut self, param: Parameter) {
+        if let Some(mut params) = self.optional_params.as_mut() {
+            params.push(param);
+        }
+    }
 }
 
 impl From<Vec<u8>> for InitAck {
@@ -251,9 +293,9 @@ impl From<Vec<u8>> for InitAck {
                     let mut v = vec![];
 
                     while offset < buf.len() {
-                        let param_type = u16::from_be_bytes(
+                        let param_type = ParamType::from(u16::from_be_bytes(
                             <[u8; 2]>::try_from(&buf[offset..=(offset + 1)]).unwrap(),
-                        );
+                        ));
                         offset += 2;
                         let len = u16::from_be_bytes(
                             <[u8; 2]>::try_from(&buf[offset..=(offset + 1)]).unwrap(),

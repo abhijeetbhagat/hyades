@@ -59,16 +59,15 @@ impl From<&ChunkHeader> for [u8; 4] {
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum ParamType {
     StateCookie,
-    Invalid
-    // TODO abhi - add other params as and when required
+    Invalid, // TODO abhi - add other params as and when required
 }
 
 #[derive(Clone, Debug)]
 pub struct Parameter {
-    param_type: ParamType,
+    pub param_type: ParamType,
     len: u16,
     value: Vec<u8>,
 }
@@ -78,7 +77,7 @@ impl Parameter {
         Self {
             param_type,
             len: value.len() as u16,
-            value
+            value,
         }
     }
 }
@@ -96,7 +95,7 @@ impl From<u16> for ParamType {
     fn from(param_type: u16) -> Self {
         match param_type {
             7 => ParamType::StateCookie,
-            _ => ParamType::Invalid
+            _ => ParamType::Invalid,
         }
     }
 }
@@ -179,7 +178,7 @@ impl From<Vec<u8>> for Init {
             num_ob_streams: u16::from_be_bytes(<[u8; 2]>::try_from(&buf[12..=13]).unwrap()),
             num_ib_streams: u16::from_be_bytes(<[u8; 2]>::try_from(&buf[14..=15]).unwrap()),
             init_tsn: u32::from_be_bytes(<[u8; 4]>::try_from(&buf[16..=19]).unwrap()),
-            
+
             // while we haven't reached the end of the buffer:
             //      parse the length of the param
             //      read length number of bytes from buf
@@ -193,9 +192,10 @@ impl From<Vec<u8>> for Init {
                     let mut v = vec![];
 
                     while offset < buf.len() {
-                        let param_type = ParamType::from(u16::from_be_bytes(
+                        let param_type = u16::from_be_bytes(
                             <[u8; 2]>::try_from(&buf[offset..=(offset + 1)]).unwrap(),
-                        ));
+                        )
+                        .into();
                         offset += 2;
                         let len = u16::from_be_bytes(
                             <[u8; 2]>::try_from(&buf[offset..=(offset + 1)]).unwrap(),
@@ -245,17 +245,13 @@ pub struct InitAck {
     num_ob_streams: u16,
     num_ib_streams: u16,
     init_tsn: u32,
-    optional_params: Option<Vec<Parameter>>,
+    pub optional_params: Option<Vec<Parameter>>,
 }
 
 impl InitAck {
     pub fn new(init: Init) -> Self {
         Self {
-            header: ChunkHeader::new(
-                2,
-                0,
-                20
-            ),
+            header: ChunkHeader::new(2, 0, 20),
             init_tag: init.init_tag,
             a_rwnd: init.a_rwnd,
             num_ob_streams: init.num_ob_streams,
@@ -293,9 +289,10 @@ impl From<Vec<u8>> for InitAck {
                     let mut v = vec![];
 
                     while offset < buf.len() {
-                        let param_type = ParamType::from(u16::from_be_bytes(
+                        let param_type = u16::from_be_bytes(
                             <[u8; 2]>::try_from(&buf[offset..=(offset + 1)]).unwrap(),
-                        ));
+                        )
+                        .into();
                         offset += 2;
                         let len = u16::from_be_bytes(
                             <[u8; 2]>::try_from(&buf[offset..=(offset + 1)]).unwrap(),

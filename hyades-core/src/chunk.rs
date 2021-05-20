@@ -1,5 +1,6 @@
 use rand::{rngs::ThreadRng, thread_rng, Rng};
 use std::convert::TryFrom;
+use crate::cookie::Cookie;
 
 #[derive(Clone, Debug)]
 enum ChunkType {
@@ -69,7 +70,7 @@ pub enum ParamType {
 pub struct Parameter {
     pub param_type: ParamType,
     len: u16,
-    value: Vec<u8>,
+    pub value: Vec<u8>,
 }
 
 impl Parameter {
@@ -335,17 +336,21 @@ impl Chunk for InitAck {
 }
 
 #[derive(Clone, Debug)]
-pub struct CookieEcho {}
+pub struct CookieEcho {
+    cookie: Cookie
+}
 
 impl CookieEcho {
-    pub fn new() -> CookieEcho {
-        Self {}
+    pub fn new(cookie: Cookie) -> CookieEcho {
+        Self { cookie }
     }
 }
 
 impl From<Vec<u8>> for CookieEcho {
     fn from(buf: Vec<u8>) -> Self {
-        Self {}
+        Self {
+            cookie: Cookie::from(buf)
+        }
     }
 }
 

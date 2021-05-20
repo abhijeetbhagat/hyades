@@ -1,6 +1,7 @@
 use rand::{rngs::ThreadRng, thread_rng, Rng};
 use std::convert::TryFrom;
 use crate::cookie::Cookie;
+use log::debug;
 
 #[derive(Clone, Debug)]
 enum ChunkType {
@@ -265,6 +266,8 @@ impl InitAck {
     pub fn add_param(&mut self, param: Parameter) {
         if let Some(mut params) = self.optional_params.as_mut() {
             params.push(param);
+        } else {
+            self.optional_params = Some(vec![param]);
         }
     }
 }

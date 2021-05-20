@@ -2,7 +2,13 @@ use rand::{thread_rng, Rng};
 
 #[derive(Clone, Debug)]
 pub struct Cookie {
-    internal: Vec<u8>,
+    internal: Vec<u8>
+}
+
+impl PartialEq for Cookie {
+    fn eq(&self, other: &Self) -> bool {
+        self.internal == other.internal
+    }
 }
 
 impl Cookie {
@@ -14,11 +20,15 @@ impl Cookie {
             internal: buf.to_vec(),
         }
     }
+
+    pub fn len(&self) -> usize {
+        self.internal.len()
+    }
 }
 
-impl From<Cookie> for Vec<u8> {
-    fn from(cookie: Cookie) -> Self {
-        cookie.internal
+impl From<&Cookie> for Vec<u8> {
+    fn from(cookie: &Cookie) -> Self {
+        cookie.internal.clone()
     }
 }
 

@@ -337,18 +337,27 @@ impl Chunk for InitAck {
 
 #[derive(Clone, Debug)]
 pub struct CookieEcho {
-    cookie: Cookie
+    header: ChunkHeader,
+    pub cookie: Cookie
 }
 
 impl CookieEcho {
     pub fn new(cookie: Cookie) -> CookieEcho {
-        Self { cookie }
+        Self {
+            header: ChunkHeader::new(10, 0, 4 + cookie.len() as u16),
+            cookie 
+        }
     }
 }
 
 impl From<Vec<u8>> for CookieEcho {
     fn from(buf: Vec<u8>) -> Self {
         Self {
+            header: ChunkHeader::new(
+                buf[0],
+                buf[1],
+                u16::from_be_bytes(<[u8; 2]>::try_from(&buf[2..=3]).unwrap()),
+            ),
             cookie: Cookie::from(buf)
         }
     }
@@ -356,28 +365,41 @@ impl From<Vec<u8>> for CookieEcho {
 
 impl Chunk for CookieEcho {
     fn get_bytes(&self) -> Vec<u8> {
-        todo!()
+        let mut v = vec![];
+        v.extend(<[u8; 4]>::from(&self.header));
+        v.extend(Vec::<u8>::from(&self.cookie));
+        v
     }
 }
 
 #[derive(Clone, Debug)]
-pub struct CookieAck {}
+pub struct CookieAck {
+    header: ChunkHeader
+}
 
 impl CookieAck {
     pub fn new() -> Self {
-        Self {}
+        Self {
+            header: ChunkHeader::new(11, 0, 4)
+        }
     }
 }
 
 impl From<Vec<u8>> for CookieAck {
     fn from(buf: Vec<u8>) -> Self {
-        Self {}
+        Self {
+            header: ChunkHeader::new(
+                buf[0],
+                buf[1],
+                u16::from_be_bytes(<[u8; 2]>::try_from(&buf[2..=3]).unwrap())
+            )
+        }
     }
 }
 
 impl Chunk for CookieAck {
     fn get_bytes(&self) -> Vec<u8> {
-        todo!()
+        <[u8; 4]>::from(&self.header).into()
     }
 }
 

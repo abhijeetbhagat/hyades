@@ -63,6 +63,7 @@ impl From<&ChunkHeader> for [u8; 4] {
 #[derive(Clone, Debug, PartialEq)]
 pub enum ParamType {
     StateCookie,
+    HostNameAddr,
     Invalid, // TODO abhi - add other params as and when required
 }
 
@@ -87,6 +88,7 @@ impl From<&ParamType> for u16 {
     fn from(param_type: &ParamType) -> Self {
         match param_type {
             ParamType::StateCookie => 7,
+            ParamType::HostNameAddr => 11,
             ParamType::Invalid => 0,
         }
     }
@@ -406,7 +408,42 @@ impl Chunk for CookieAck {
 }
 
 #[derive(Clone, Debug)]
-pub struct Data {}
+pub struct Data {
+    header: ChunkHeader,
+    tsn: u32,
+    stream_id: u16,
+    stream_seq_no: u16,
+    payload_proto_id: u32,
+    data: Vec<u8>,
+}
+
+impl Data {
+    pub fn new(
+        tsn: u32,
+        stream_id: u16,
+        stream_seq_no: u16,
+        payload_proto_id: u32,
+        start: bool,
+        end: bool,
+        data: Vec<u8>,
+    ) -> Self {
+        let flag = match (start, end) {
+            (true, false) => 6,
+            (false, true) => 1,
+            (true, true) => 7,
+            _ => 0,
+        };
+
+        Self {
+            header: ChunkHeader::new(0, flag, 32 + data.len() as u16),
+            tsn,
+            stream_id,
+            stream_seq_no,
+            payload_proto_id,
+            data,
+        }
+    }
+}
 
 impl Chunk for Data {
     fn get_bytes(&self) -> Vec<u8> {
@@ -426,7 +463,7 @@ fn test_init_conversion() {
     let params = chunk.optional_params.unwrap();
     assert!(params.len() == 1);
     let param = &params[0];
-    assert!(param.param_type == 7);
+    assert!(param.param_type == ParamType::StateCookie);
     assert!(param.len == 4);
     assert!(param.value == vec![0, 1, 0, 1]);
 }
@@ -446,7 +483,7 @@ fn test_init_conversion_2() {
     let params = chunk.optional_params.unwrap();
     assert!(params.len() == 2);
     let param = &params[1];
-    assert!(param.param_type == 11);
+    assert!(param.param_type == ParamType::HostNameAddr);
     assert!(param.len == 4);
     assert!(param.value == vec![0, 1, 0, 1]);
 }

@@ -1,5 +1,5 @@
 use crate::cookie::Cookie;
-use rand::{rngs::ThreadRng, thread_rng, Rng};
+use rand::{thread_rng, Rng};
 use std::convert::TryFrom;
 
 #[derive(Clone, Debug)]
@@ -230,7 +230,7 @@ impl InitAck {
     }
 
     pub fn add_param(&mut self, param: Parameter) {
-        if let Some(mut params) = self.optional_params.as_mut() {
+        if let Some(params) = self.optional_params.as_mut() {
             params.push(param);
         } else {
             self.optional_params = Some(vec![param]);
@@ -395,7 +395,7 @@ impl Data {
         payload_proto_id: u32,
         start: bool,
         end: bool,
-        data: Vec<u8>,
+        mut data: Vec<u8>,
     ) -> Self {
         let flag = match (start, end) {
             (true, false) => 6,
@@ -404,8 +404,18 @@ impl Data {
             _ => 0,
         };
 
+        // pad with 0s if data len not multiple of 4
+        let unpadded_data_len = data.len();
+        let diff = unpadded_data_len % 4;
+        let adjust =  if diff == 0 {
+            0
+        } else {
+            4 - diff
+        };
+        data.extend(std::iter::repeat(0).take(adjust));
+
         Self {
-            header: ChunkHeader::new(0, flag, 32 + data.len() as u16),
+            header: ChunkHeader::new(0, flag, 16 + unpadded_data_len as u16),
             tsn,
             stream_id,
             stream_seq_no,
@@ -467,4 +477,19 @@ fn test_init_conversion_with_no_params() {
     let chunk = Init::from(buf);
     assert!(chunk.num_ib_streams == 1);
     assert!(chunk.optional_params.is_none());
+}
+
+#[test]
+fn test_data_chunk() {
+    let chunk = Data::new(0, 1, 1, 0, true, false, vec![1,2,3]);
+    assert!(chunk.data.len() == 4);
+    assert!(chunk.data == vec![1,2,3,0]);
+
+    let chunk = Data::new(0, 1, 1, 0, true, false, vec![1,2,3,4]);
+    assert!(chunk.data.len() == 4);
+    assert!(chunk.data == vec![1,2,3,4]);
+
+    let chunk = Data::new(0, 1, 1, 0, true, false, vec![1,2,3,4]);
+    assert!(chunk.data.len() == 4);
+    assert!(chunk.data == vec![1,2,3,4]);
 }

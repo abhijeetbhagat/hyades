@@ -99,22 +99,35 @@ impl Association {
 
     /// Starts a 4 way handshake from the sender side
     async fn start_sender_4_way_handshake(&mut self) -> Result<(), SCTPError> {
-        self.send_init().await?;
-        debug!("waiting for init ack");
-        let init_ack = InitAck::from(self.stream.recv().await?);
-        debug!("recvd: {:?}", init_ack);
+        let mut num_init_retries = 0;
+        while num_init_retries < self.max_init_retries {
+            debug!("sending init ...");
+            self.send_init().await?;
 
-        match init_ack.optional_params {
-            Some(params) => {
-                let param = params
-                    .iter()
-                    .find(|param| param.param_type == ParamType::StateCookie)
-                    .ok_or(SCTPError::NoCookieError)?;
-                let cookie: Cookie = (&param.value).into();
+            match timeout(Duration::from_millis(self.rto), self.stream.recv()).await {
+                Ok(bytes) => {
+                    let init_ack = InitAck::from(bytes?);
+                    debug!("recvd: {:?}", init_ack);
 
-                self.attempt_cookie_echo_and_ack(cookie).await?;
+                    match init_ack.optional_params {
+                        Some(params) => {
+                            let param = params
+                                .iter()
+                                .find(|param| param.param_type == ParamType::StateCookie)
+                                .ok_or(SCTPError::NoCookieError)?;
+                            let cookie: Cookie = (&param.value).into();
+
+                            self.attempt_cookie_echo_and_ack(cookie).await?;
+                            break;
+                        }
+                        _ => return Err(SCTPError::NoCookieError),
+                    }
+                }
+                _ => {
+                    num_init_retries += 1;
+                    continue;
+                }
             }
-            _ => return Err(SCTPError::NoCookieError),
         }
 
         Ok(())

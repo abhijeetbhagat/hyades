@@ -98,6 +98,7 @@ impl From<u16> for ParamType {
     fn from(param_type: u16) -> Self {
         match param_type {
             7 => ParamType::StateCookie,
+            11 => ParamType::HostNameAddr,
             _ => ParamType::Invalid,
         }
     }
@@ -263,7 +264,7 @@ fn parse_optional_params(buf: &[u8], start_offset: usize) -> Option<Vec<Paramete
     //      construct a param and push it into the optional_params vec
     //      repeat
     let mut offset = start_offset;
-    if offset == buf.len() - 1 {
+    if offset > buf.len() - 1 {
         None
     } else {
         let mut v = vec![];

@@ -181,43 +181,7 @@ impl From<Vec<u8>> for Init {
             num_ob_streams: u16::from_be_bytes(<[u8; 2]>::try_from(&buf[12..=13]).unwrap()),
             num_ib_streams: u16::from_be_bytes(<[u8; 2]>::try_from(&buf[14..=15]).unwrap()),
             init_tsn: u32::from_be_bytes(<[u8; 4]>::try_from(&buf[16..=19]).unwrap()),
-
-            // while we haven't reached the end of the buffer:
-            //      parse the length of the param
-            //      read length number of bytes from buf
-            //      construct a param and push it into the optional_params vec
-            //      repeat
-            optional_params: {
-                let mut offset = 20usize;
-                if offset == buf.len() - 1 {
-                    None
-                } else {
-                    let mut v = vec![];
-
-                    while offset < buf.len() {
-                        let param_type = u16::from_be_bytes(
-                            <[u8; 2]>::try_from(&buf[offset..=(offset + 1)]).unwrap(),
-                        )
-                        .into();
-                        offset += 2;
-                        let len = u16::from_be_bytes(
-                            <[u8; 2]>::try_from(&buf[offset..=(offset + 1)]).unwrap(),
-                        );
-                        offset += 2;
-                        let value = &buf[offset..offset + len as usize];
-
-                        v.push(Parameter {
-                            param_type,
-                            len,
-                            value: value.to_vec(),
-                        });
-
-                        offset += len as usize;
-                    }
-
-                    Some(v)
-                }
-            },
+            optional_params: parse_optional_params(&buf, 20),
         }
     }
 }
@@ -286,38 +250,43 @@ impl From<Vec<u8>> for InitAck {
             num_ob_streams: u16::from_be_bytes(<[u8; 2]>::try_from(&buf[12..=13]).unwrap()),
             num_ib_streams: u16::from_be_bytes(<[u8; 2]>::try_from(&buf[14..=15]).unwrap()),
             init_tsn: u32::from_be_bytes(<[u8; 4]>::try_from(&buf[16..=19]).unwrap()),
-            optional_params: {
-                let mut offset = 20usize;
-                if offset == buf.len() - 1 {
-                    None
-                } else {
-                    let mut v = vec![];
-
-                    while offset < buf.len() {
-                        let param_type = u16::from_be_bytes(
-                            <[u8; 2]>::try_from(&buf[offset..=(offset + 1)]).unwrap(),
-                        )
-                        .into();
-                        offset += 2;
-                        let len = u16::from_be_bytes(
-                            <[u8; 2]>::try_from(&buf[offset..=(offset + 1)]).unwrap(),
-                        );
-                        offset += 2;
-                        let value = &buf[offset..offset + len as usize];
-
-                        v.push(Parameter {
-                            param_type,
-                            len,
-                            value: value.to_vec(),
-                        });
-
-                        offset += len as usize;
-                    }
-
-                    Some(v)
-                }
-            },
+            optional_params: parse_optional_params(&buf, 20),
         }
+    }
+}
+
+/// Parses optional params and return them as `Option<Vec<Param>>`
+fn parse_optional_params(buf: &[u8], start_offset: usize) -> Option<Vec<Parameter>> {
+    // while we haven't reached the end of the buffer:
+    //      parse the length of the param
+    //      read length number of bytes from buf
+    //      construct a param and push it into the optional_params vec
+    //      repeat
+    let mut offset = start_offset;
+    if offset == buf.len() - 1 {
+        None
+    } else {
+        let mut v = vec![];
+
+        while offset < buf.len() {
+            let param_type =
+                u16::from_be_bytes(<[u8; 2]>::try_from(&buf[offset..=(offset + 1)]).unwrap())
+                    .into();
+            offset += 2;
+            let len = u16::from_be_bytes(<[u8; 2]>::try_from(&buf[offset..=(offset + 1)]).unwrap());
+            offset += 2;
+            let value = &buf[offset..offset + len as usize];
+
+            v.push(Parameter {
+                param_type,
+                len,
+                value: value.to_vec(),
+            });
+
+            offset += len as usize;
+        }
+
+        Some(v)
     }
 }
 

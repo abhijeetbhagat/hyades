@@ -20,4 +20,8 @@ pub enum SCTPError {
     InvalidLocalAddress,
     #[error("listener error")]
     SocketListenerError,
+    #[error("no state cookie in the init ack chunk")]
+    NoCookieError,
+    #[error("sent and recvd cookies do not match")]
+    CookieMismatchError,
 }

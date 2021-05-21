@@ -51,7 +51,8 @@ impl Stream {
         // TODO abhi - set min vec capacity from SCTP RFC
         let mut buf = [0u8; 1024]; // Vec::new();
 
-        let len = self.sock
+        let len = self
+            .sock
             .recv(&mut buf)
             .await
             .map_err(|_| SCTPError::SocketRecvError)?;
@@ -62,12 +63,15 @@ impl Stream {
     pub async fn recv_from(&self) -> Result<(Vec<u8>, SocketAddr), SCTPError> {
         // TODO abhi - set min vec capacity from SCTP RFC
         let mut buf = [0u8; 1024]; // Vec::new();
-        let (len, addr) = self.sock
+        let (len, addr) = self
+            .sock
             .recv_from(&mut buf)
             .await
             .map_err(|_| SCTPError::SocketRecvError)?;
-        
-        self.sock.connect(addr).await
+
+        self.sock
+            .connect(addr)
+            .await
             .map_err(|_| SCTPError::SocketConnectError)?;
 
         Ok((buf[..len].to_vec(), addr))

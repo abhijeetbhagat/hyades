@@ -142,7 +142,7 @@ pub struct Init {
     num_ob_streams: u16,
     num_ib_streams: u16,
     init_tsn: u32,
-    optional_params: Option<Vec<Parameter>>,
+    pub optional_params: Option<Vec<Parameter>>,
 }
 
 impl Init {
@@ -384,7 +384,7 @@ pub struct Data {
     stream_id: u16,
     stream_seq_no: u16,
     payload_proto_id: u32,
-    data: Vec<u8>,
+    pub data: Vec<u8>,
 }
 
 impl Data {
@@ -429,67 +429,4 @@ impl Chunk for Data {
     fn get_bytes(&self) -> Vec<u8> {
         todo!()
     }
-}
-
-#[test]
-fn test_init_conversion() {
-    let buf = vec![
-        1u8, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, // optional params
-        0, 7, 0, 4, 0, 1, 0, 1,
-    ];
-    let chunk = Init::from(buf);
-    assert!(chunk.num_ib_streams == 1);
-    assert!(chunk.optional_params.is_some());
-    let params = chunk.optional_params.unwrap();
-    assert!(params.len() == 1);
-    let param = &params[0];
-    assert!(param.param_type == ParamType::StateCookie);
-    assert!(param.len == 4);
-    assert!(param.value == vec![0, 1, 0, 1]);
-}
-
-#[test]
-fn test_init_conversion_2() {
-    let buf = vec![
-        1u8, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1,
-        // optional params
-        // param 1
-        0, 7, 0, 4, 0, 1, 0, 1, // param 2
-        0, 11, 0, 4, 0, 1, 0, 1,
-    ];
-    let chunk = Init::from(buf);
-    assert!(chunk.num_ib_streams == 1);
-    assert!(chunk.optional_params.is_some());
-    let params = chunk.optional_params.unwrap();
-    assert!(params.len() == 2);
-    let param = &params[1];
-    assert!(param.param_type == ParamType::HostNameAddr);
-    assert!(param.len == 4);
-    assert!(param.value == vec![0, 1, 0, 1]);
-}
-
-#[test]
-fn test_init_conversion_with_no_params() {
-    let buf = vec![
-        1u8, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1,
-        // no optional params
-    ];
-    let chunk = Init::from(buf);
-    assert!(chunk.num_ib_streams == 1);
-    assert!(chunk.optional_params.is_none());
-}
-
-#[test]
-fn test_data_chunk() {
-    let chunk = Data::new(0, 1, 1, 0, true, false, vec![1,2,3]);
-    assert!(chunk.data.len() == 4);
-    assert!(chunk.data == vec![1,2,3,0]);
-
-    let chunk = Data::new(0, 1, 1, 0, true, false, vec![1,2,3,4]);
-    assert!(chunk.data.len() == 4);
-    assert!(chunk.data == vec![1,2,3,4]);
-
-    let chunk = Data::new(0, 1, 1, 0, true, false, vec![1,2,3,4]);
-    assert!(chunk.data.len() == 4);
-    assert!(chunk.data == vec![1,2,3,4]);
 }

@@ -33,7 +33,7 @@ pub struct Association {
     init_tag: u32,
     max_retries: u8,
     max_init_retries: u8,
-    rto: u64
+    rto: u64,
 }
 
 impl Association {
@@ -63,7 +63,7 @@ impl Association {
             init_tag: 0,
             max_retries: ASSOCIATION_MAX_RETRANS,
             max_init_retries: MAX_INIT_RETRANSMITS,
-            rto: RTO_INITIAL * 1000
+            rto: RTO_INITIAL * 1000,
         };
 
         association.start_sender_4_way_handshake().await?;
@@ -89,7 +89,7 @@ impl Association {
             init_tag: 0,
             max_retries: ASSOCIATION_MAX_RETRANS,
             max_init_retries: MAX_INIT_RETRANSMITS,
-            rto: RTO_INITIAL * 1000
+            rto: RTO_INITIAL * 1000,
         };
 
         association.start_recvr_4_way_handshake().await?;
@@ -147,7 +147,7 @@ impl Association {
             debug!("sending cookie echo {}", num_retries);
             self.send_cookie_echo(&packet).await?;
 
-            // TODO abhi - timeout duration of cookie timer isn't hardcoded; 
+            // TODO abhi - timeout duration of cookie timer isn't hardcoded;
             // it is calculated from RTO (which is 3 secs to begin with according to the RFC)
             match timeout(Duration::from_millis(self.rto), self.stream.recv()).await {
                 Ok(bytes) => {
@@ -179,7 +179,7 @@ impl Association {
             self.send_cookie_ack().await?;
         } else {
             //TODO abhi - 'silently discard the packet'
-            return Err(SCTPError::CookieMismatchError)
+            return Err(SCTPError::CookieMismatchError);
         }
 
         sleep(Duration::from_millis(2000)).await;

@@ -49,7 +49,7 @@ impl From<&Vec<u8>> for Cookie {
 impl From<&[u8]> for Cookie {
     fn from(buf: &[u8]) -> Self {
         Self {
-            internal: buf.to_vec()
+            internal: buf.to_vec(),
         }
     }
 }

@@ -1,14 +1,15 @@
 use crate::association::Association;
 use crate::chunk::Init;
 use crate::error::SCTPError;
+use log::{debug, error, info};
 use std::net::SocketAddr;
 use tokio::net::UdpSocket;
-use log::{debug, error, info};
 
+/// An SCTP endpoint.
+/// All methods inside this struct are meant to be called from the ULP.
 pub struct SCTPEndpoint {
     local_addr: SocketAddr,
-    remote_ip: u32,
-    remote_port: u16,
+    dst_addr: Option<SocketAddr>,
     association: Association,
 }
 
@@ -17,52 +18,66 @@ impl SCTPEndpoint {
         todo!()
     }
 
-    pub async fn associate(
-        &self,
+    /// Create an association from sender side
+    pub async fn associate_send(
         local_addr: impl AsRef<str>,
         dst_addr: impl AsRef<str>,
         num_outbound_streams: u16,
     ) -> Result<Self, SCTPError> {
-        let association = Association::new(local_addr, dst_addr).await?;
-        todo!()
-    }
-
-    pub async fn listen(&self, local_addr: impl AsRef<str>) -> Result<(), SCTPError> {
-        let local_addr: SocketAddr = local_addr
+        let local_address: SocketAddr = local_addr
             .as_ref()
             .parse()
             .map_err(|_| SCTPError::InvalidLocalAddress)?;
-        let socket = UdpSocket::bind(local_addr)
-            .await
-            .map_err(|_| SCTPError::SocketBindError)?;
+        let dst_address: SocketAddr = dst_addr
+            .as_ref()
+            .parse()
+            .map_err(|_| SCTPError::InvalidRemoteAddress)?;
 
-        let mut buf = [0u8; 1024];
-        socket
-            .recv(&mut buf)
-            .await
-            .map_err(|_| SCTPError::SocketRecvError)?;
-        info!("{:?}", Init::from(&buf));
+        let association = Association::new_sender(local_addr, dst_addr).await?;
 
-        Ok(())
+        Ok(Self {
+            local_addr: local_address,
+            dst_addr: Some(dst_address),
+            association,
+        })
     }
 
+    /// Create an association from receiver side
+    pub async fn associate_recv(local_addr: impl AsRef<str>) -> Result<Self, SCTPError> {
+        let local_address: SocketAddr = local_addr
+            .as_ref()
+            .parse()
+            .map_err(|_| SCTPError::InvalidLocalAddress)?;
+
+        let association = Association::new_recvr(local_addr).await?;
+
+        Ok(Self {
+            local_addr: local_address,
+            dst_addr: None,
+            association,
+        })
+    }
+
+    /// Shutdown an association
     pub async fn shutdown(&self) {
         let _ = self.association.terminate().await;
     }
 
+    /// Abort an association
     pub async fn abort(&self) {
         let _ = self.association.abort().await;
     }
 
-    pub fn send(&self) {}
+    /// Send data to the associated endpoint
+    pub async fn send(&self, bytes: &[u8]) {}
 
     pub fn set_primary(&self) {
         // Not needed for WebRTC
     }
 
-    pub fn receive(&self) {
+    pub async fn receive(&self) -> Vec<u8> {
         // TODO: abhi - pop message from association's queue
-        //
+        todo!()
     }
 
     pub fn status(&self) {}

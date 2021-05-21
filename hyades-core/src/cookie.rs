@@ -2,7 +2,7 @@ use rand::{thread_rng, Rng};
 
 #[derive(Clone, Debug)]
 pub struct Cookie {
-    internal: Vec<u8>
+    internal: Vec<u8>,
 }
 
 impl PartialEq for Cookie {
@@ -34,21 +34,25 @@ impl From<&Cookie> for Vec<u8> {
 
 impl From<Vec<u8>> for Cookie {
     fn from(buf: Vec<u8>) -> Self {
-        Self {
-            internal: buf
-        }
+        Self { internal: buf }
     }
 }
 
 impl From<&Vec<u8>> for Cookie {
     fn from(buf: &Vec<u8>) -> Self {
         Self {
-            internal: buf.clone()
+            internal: buf.clone(),
         }
     }
 }
 
-
+impl From<&[u8]> for Cookie {
+    fn from(buf: &[u8]) -> Self {
+        Self {
+            internal: buf.to_vec()
+        }
+    }
+}
 /*
 pub fn gen_cookie() {
     let rng = rand::SystemRandom::new();

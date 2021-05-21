@@ -1,7 +1,6 @@
+use crate::cookie::Cookie;
 use rand::{rngs::ThreadRng, thread_rng, Rng};
 use std::convert::TryFrom;
-use crate::cookie::Cookie;
-use log::debug;
 
 #[derive(Clone, Debug)]
 enum ChunkType {
@@ -341,14 +340,14 @@ impl Chunk for InitAck {
 #[derive(Clone, Debug)]
 pub struct CookieEcho {
     header: ChunkHeader,
-    pub cookie: Cookie
+    pub cookie: Cookie,
 }
 
 impl CookieEcho {
     pub fn new(cookie: Cookie) -> CookieEcho {
         Self {
             header: ChunkHeader::new(10, 0, 4 + cookie.len() as u16),
-            cookie 
+            cookie,
         }
     }
 }
@@ -361,7 +360,7 @@ impl From<Vec<u8>> for CookieEcho {
                 buf[1],
                 u16::from_be_bytes(<[u8; 2]>::try_from(&buf[2..=3]).unwrap()),
             ),
-            cookie: Cookie::from(buf)
+            cookie: Cookie::from(&buf[4..]),
         }
     }
 }
@@ -377,13 +376,13 @@ impl Chunk for CookieEcho {
 
 #[derive(Clone, Debug)]
 pub struct CookieAck {
-    header: ChunkHeader
+    header: ChunkHeader,
 }
 
 impl CookieAck {
     pub fn new() -> Self {
         Self {
-            header: ChunkHeader::new(11, 0, 4)
+            header: ChunkHeader::new(11, 0, 4),
         }
     }
 }
@@ -394,8 +393,8 @@ impl From<Vec<u8>> for CookieAck {
             header: ChunkHeader::new(
                 buf[0],
                 buf[1],
-                u16::from_be_bytes(<[u8; 2]>::try_from(&buf[2..=3]).unwrap())
-            )
+                u16::from_be_bytes(<[u8; 2]>::try_from(&buf[2..=3]).unwrap()),
+            ),
         }
     }
 }

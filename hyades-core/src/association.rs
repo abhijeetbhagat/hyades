@@ -34,6 +34,8 @@ pub struct Association {
     max_retries: u8,
     max_init_retries: u8,
     rto: u64,
+    largest_tsn: u32,
+    remote_rwnd: u32
 }
 
 impl Association {
@@ -64,6 +66,8 @@ impl Association {
             max_retries: ASSOCIATION_MAX_RETRANS,
             max_init_retries: MAX_INIT_RETRANSMITS,
             rto: RTO_INITIAL * 1000,
+            largest_tsn: 0,
+            remote_rwnd: 0
         };
 
         association.start_sender_4_way_handshake().await?;
@@ -90,6 +94,8 @@ impl Association {
             max_retries: ASSOCIATION_MAX_RETRANS,
             max_init_retries: MAX_INIT_RETRANSMITS,
             rto: RTO_INITIAL * 1000,
+            largest_tsn: 0,
+            remote_rwnd: 0
         };
 
         association.start_recvr_4_way_handshake().await?;

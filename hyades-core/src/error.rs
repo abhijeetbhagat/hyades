@@ -24,4 +24,6 @@ pub enum SCTPError {
     NoCookieError,
     #[error("sent and recvd cookies do not match")]
     CookieMismatchError,
+    #[error("remote buffer is full")]
+    RemoteBufferFull
 }

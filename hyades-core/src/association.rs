@@ -245,6 +245,13 @@ impl Association {
         Ok(())
     }
 
+    /// Sends user data
+    pub async fn send(&self, data: &[u8]) -> Result<(), SCTPError> {
+        if self.remote_rwnd == 0 {
+            Err(SCTPError::RemoteBufferFull)
+        }
+    }
+
     /// Graceful termination of the association
     pub async fn terminate(&self) -> Result<(), SCTPError> {
         // TODO: abhi - send all pending msgs from local msg queue

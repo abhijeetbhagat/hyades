@@ -254,6 +254,16 @@ impl Association {
             return Err(SCTPError::RemoteBufferFull)
         }
 
+        self.stream.send(data).await;
+        match timeout(Duration::from_millis(self.rtx_time), self.stream.recv()).await {
+
+                Ok(bytes) => {
+                }
+                _ => {
+
+                }
+        }
+
         Ok(())
     }
 

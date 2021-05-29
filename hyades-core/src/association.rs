@@ -249,7 +249,7 @@ impl Association {
     }
 
     /// Sends user data
-    pub async fn send(&self, data: &[u8]) -> Result<(), SCTPError> {
+    pub async fn send(&mut self, data: &[u8]) -> Result<(), SCTPError> {
         if self.remote_rwnd == 0 {
             return Err(SCTPError::RemoteBufferFull)
         }
@@ -260,7 +260,8 @@ impl Association {
                 Ok(bytes) => {
                 }
                 _ => {
-
+                    // 6.3.3.  Handle T3-rtx Expiration
+                    self.rto = self.rto * 2;
                 }
         }
 

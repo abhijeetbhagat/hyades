@@ -36,7 +36,6 @@ pub struct Association {
     rto: u64,
     largest_tsn: u32,
     remote_rwnd: u32,
-    rtx_time: u64
 }
 
 impl Association {
@@ -69,7 +68,6 @@ impl Association {
             rto: RTO_INITIAL * 1000,
             largest_tsn: 0,
             remote_rwnd: 0,
-            rtx_time: 0
         };
 
         association.start_sender_4_way_handshake().await?;
@@ -98,7 +96,6 @@ impl Association {
             rto: RTO_INITIAL * 1000,
             largest_tsn: 0,
             remote_rwnd: 0,
-            rtx_time: 0
         };
 
         association.start_recvr_4_way_handshake().await?;
@@ -255,14 +252,13 @@ impl Association {
         }
 
         self.stream.send(data).await;
-        match timeout(Duration::from_millis(self.rtx_time), self.stream.recv()).await {
+        match timeout(Duration::from_millis(self.rto), self.stream.recv()).await {
 
                 Ok(bytes) => {
                 }
                 _ => {
                     // 6.3.3.  Handle T3-rtx Expiration
                     self.rto = self.rto * 2;
-                    self.rtx_time = self.rto;
                 }
         }
 

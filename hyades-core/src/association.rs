@@ -262,6 +262,7 @@ impl Association {
                 _ => {
                     // 6.3.3.  Handle T3-rtx Expiration
                     self.rto = self.rto * 2;
+                    self.rtx_time = self.rto;
                 }
         }
 

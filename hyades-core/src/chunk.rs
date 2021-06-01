@@ -492,3 +492,75 @@ pub struct Sack {
     dup_tsns: Option<Vec<u32>>,
 }
 
+/*
+        0                   1                   2                   3
+        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       |   Type = 9    | Chunk  Flags  |           Length              |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       \                                                               \
+       /                    one or more Error Causes                   /
+       \                                                               \
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*/
+
+#[derive(Clone, Debug)]
+pub struct CauseHeader {
+    code: u16,
+    len: u16,
+}
+
+#[derive(Clone, Debug)]
+pub struct InvalidStreamId {
+    header: CauseHeader,
+    id: u16,
+    reserved: u16
+}
+
+#[derive(Clone, Debug)]
+pub struct MissingMandatoryParam {
+    header: CauseHeader,
+    num: u32,
+    params: Vec<ParamType>
+}
+
+#[derive(Clone, Debug)]
+pub struct StateCookieError {
+    header: CauseHeader,
+    staleness_measure: u32
+}
+
+#[derive(Clone, Debug)]
+pub struct OutOfResource {
+    header: CauseHeader,
+}
+
+#[derive(Clone, Debug)]
+pub struct OutOfResource {
+    header: CauseHeader,
+}
+
+#[derive(Clone, Debug)]
+pub struct Error {
+    header: ChunkHeader,
+    errors: Vec<Cause>
+}
+
+/*
+        0                   1                   2                   3
+        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       |   Type = 6    |Reserved     |T|           Length              |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       \                                                               \
+       /                   zero or more Error Causes                   /
+       \                                                               \
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*/
+
+#[derive(Clone, Debug)]
+pub struct Abort {
+    header: ChunkHeader,
+    errors: Option<Vec<Error>>
+}
+

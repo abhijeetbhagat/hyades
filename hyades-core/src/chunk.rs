@@ -541,6 +541,52 @@ pub struct OutOfResource {
 }
 
 #[derive(Clone, Debug)]
+pub struct UnresolvableAddr {
+    header: CauseHeader
+}
+
+#[derive(Clone, Debug)]
+pub struct UnrecognizedChunkType {
+    header: CauseHeader
+}
+
+#[derive(Clone, Debug)]
+pub struct InvalidMandatoryParam {
+    header: CauseHeader
+}
+
+#[derive(Clone, Debug)]
+pub struct UnrecognizedParams {
+    header: CauseHeader
+}
+
+#[derive(Clone, Debug)]
+pub struct NoUserData {
+    header: CauseHeader,
+    tsn: u32
+}
+
+#[derive(Clone, Debug)]
+pub struct CookieRcvdWhileShuttingDown {
+    header: CauseHeader,
+}
+
+#[derive(Clone, Debug)]
+pub struct AssocRestartWithNewAddrs {
+    header: CauseHeader,
+}
+
+#[derive(Clone, Debug)]
+pub struct UserInitiatedAbort {
+    header: CauseHeader,
+}
+
+#[derive(Clone, Debug)]
+pub struct ProtocolViolation {
+    header: CauseHeader,
+}
+
+#[derive(Clone, Debug)]
 pub struct Error {
     header: ChunkHeader,
     errors: Vec<Cause>

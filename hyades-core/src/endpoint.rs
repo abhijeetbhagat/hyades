@@ -77,7 +77,7 @@ impl SCTPEndpoint {
 
     pub async fn receive(&self) -> Vec<u8> {
         // TODO: abhi - pop message from association's queue
-        todo!()
+        let packet = self.association.msg_queue.pop();
     }
 
     pub fn status(&self) {}

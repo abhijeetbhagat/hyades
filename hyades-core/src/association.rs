@@ -28,7 +28,7 @@ pub struct Association {
     local_addr: SocketAddr,
     remote_addr: Option<SocketAddr>,
     stream: Stream,
-    msg_queue: VecDeque<Packet>,
+    pub msg_queue: VecDeque<Packet>,
     rng: ThreadRng,
     init_tag: u32,
     max_retries: u8,

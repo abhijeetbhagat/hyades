@@ -504,6 +504,10 @@ pub struct Sack {
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
+trait Cause {
+    fn get_bytes(&self) -> Vec<u8>;
+}
+
 #[derive(Clone, Debug)]
 pub struct CauseHeader {
     code: u16,
@@ -517,11 +521,23 @@ pub struct InvalidStreamId {
     reserved: u16
 }
 
+impl Cause for InvalidStreamId {
+    fn get_bytes(&self) -> Vec<u8> {
+        todo!()
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct MissingMandatoryParam {
     header: CauseHeader,
     num: u32,
     params: Vec<ParamType>
+}
+
+impl Cause for MissingMandatoryParam {
+    fn get_bytes(&self) -> Vec<u8> {
+        todo!()
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -530,14 +546,21 @@ pub struct StateCookieError {
     staleness_measure: u32
 }
 
-#[derive(Clone, Debug)]
-pub struct OutOfResource {
-    header: CauseHeader,
+impl Cause for StateCookieError {
+    fn get_bytes(&self) -> Vec<u8> {
+        todo!()
+    }
 }
 
 #[derive(Clone, Debug)]
 pub struct OutOfResource {
     header: CauseHeader,
+}
+
+impl Cause for OutOfResource {
+    fn get_bytes(&self) -> Vec<u8> {
+        todo!()
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -545,9 +568,21 @@ pub struct UnresolvableAddr {
     header: CauseHeader
 }
 
+impl Cause for UnresolvableAddr {
+    fn get_bytes(&self) -> Vec<u8> {
+        todo!()
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct UnrecognizedChunkType {
     header: CauseHeader
+}
+
+impl Cause for UnrecognizedChunkType {
+    fn get_bytes(&self) -> Vec<u8> {
+        todo!()
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -555,9 +590,21 @@ pub struct InvalidMandatoryParam {
     header: CauseHeader
 }
 
+impl Cause for InvalidMandatoryParam {
+    fn get_bytes(&self) -> Vec<u8> {
+        todo!()
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct UnrecognizedParams {
     header: CauseHeader
+}
+
+impl Cause for UnrecognizedParams {
+    fn get_bytes(&self) -> Vec<u8> {
+        todo!()
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -566,9 +613,21 @@ pub struct NoUserData {
     tsn: u32
 }
 
+impl Cause for NoUserData {
+    fn get_bytes(&self) -> Vec<u8> {
+        todo!()
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct CookieRcvdWhileShuttingDown {
     header: CauseHeader,
+}
+
+impl Cause for CookieRcvdWhileShuttingDown {
+    fn get_bytes(&self) -> Vec<u8> {
+        todo!()
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -576,9 +635,21 @@ pub struct AssocRestartWithNewAddrs {
     header: CauseHeader,
 }
 
+impl Cause for AssocRestartWithNewAddrs {
+    fn get_bytes(&self) -> Vec<u8> {
+        todo!()
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct UserInitiatedAbort {
     header: CauseHeader,
+}
+
+impl Cause for UserInitiatedAbort {
+    fn get_bytes(&self) -> Vec<u8> {
+        todo!()
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -586,10 +657,16 @@ pub struct ProtocolViolation {
     header: CauseHeader,
 }
 
+impl Cause for ProtocolViolation {
+    fn get_bytes(&self) -> Vec<u8> {
+        todo!()
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Error {
     header: ChunkHeader,
-    errors: Vec<Cause>
+    errors: Vec<Box<dyn Cause>>
 }
 
 /*

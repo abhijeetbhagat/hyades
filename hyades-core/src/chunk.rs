@@ -10,9 +10,11 @@ enum ChunkType {
     CookieEcho,
 }
 
-pub trait Chunk {
+pub trait RawBytes {
     fn get_bytes(&self) -> Vec<u8>;
 }
+
+pub trait Chunk : RawBytes {}
 
 impl From<&Box<dyn Chunk>> for Vec<u8> {
     fn from(b: &Box<dyn Chunk>) -> Self {
@@ -504,9 +506,7 @@ pub struct Sack {
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
-trait Cause {
-    fn get_bytes(&self) -> Vec<u8>;
-}
+pub trait Cause : RawBytes {}
 
 #[derive(Clone, Debug)]
 pub struct CauseHeader {
@@ -669,6 +669,12 @@ pub struct Error {
     errors: Vec<Box<dyn Cause>>
 }
 
+impl RawBytes for Error {
+    fn get_bytes(&self) -> Vec<u8> {
+        todo!()
+    }
+}
+
 /*
         0                   1                   2                   3
         0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -687,3 +693,10 @@ pub struct Abort {
     errors: Option<Vec<Error>>
 }
 
+impl Chunk for Abort {
+    fn get_bytes(&self) -> Vec<u8> {
+        let mut v = vec![];
+        v.extend(<[u8; 4]>::from(&self.header));
+        todo!()
+    }
+}

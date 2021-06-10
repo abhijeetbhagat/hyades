@@ -1,4 +1,4 @@
-use crate::chunk::{CookieAck, CookieEcho, Init, InitAck, ParamType, Parameter};
+use crate::chunk::{Abort, CookieAck, CookieEcho, Init, InitAck, ParamType, Parameter};
 use crate::cookie::Cookie;
 use crate::error::SCTPError;
 use crate::packet::Packet;
@@ -272,9 +272,19 @@ impl Association {
     }
 
     /// Non-graceful termination of the association
-    pub async fn abort(&self) {
+    pub async fn abort(&mut self) {
         // TODO: abhi -
         // 1. destroy local msg queue
+        let _ = self.msg_queue.drain(..);
         // 2. send ABORT chunk to peer
+        
+        let mut packet = Packet::new(
+            self.local_addr.port(),
+            self.remote_addr.as_ref().unwrap().port(),
+        );
+
+        packet.add_chunk(Box::new(Abort::new()));
+
+        self.stream.send(&Vec::<u8>::from(&packet)).await?;
     }
 }

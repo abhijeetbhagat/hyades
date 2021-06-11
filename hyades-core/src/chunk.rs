@@ -693,10 +693,49 @@ pub struct Abort {
     errors: Option<Vec<Error>>
 }
 
+impl Abort {
+    pub fn new(errors: Option<Vec<Error>>) -> Self {
+        Self {
+            header: ChunkHeader::new(6, 1, 4 + errors.as_ref().map_or(0, |v| *(&v.len()) as u16)),            
+            errors: None
+        }
+    }
+}
+
 impl Chunk for Abort {
     fn get_bytes(&self) -> Vec<u8> {
         let mut v = vec![];
         v.extend(<[u8; 4]>::from(&self.header));
         todo!()
+    }
+}
+
+/*
+        0                   1                   2                   3
+        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       |   Type = 14   |Reserved     |T|      Length = 4               |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*/
+
+#[derive(Clone, Debug)]
+pub struct ShutdownComplete {
+    header: ChunkHeader
+}
+
+impl ShutdownComplete {
+    pub fn new() -> Self {
+        Self {
+            header: ChunkHeader::new(14, 1, 4)
+        }
+    }
+
+}
+
+impl Chunk for ShutdownComplete {
+    fn get_bytes(&self) -> Vec<u8> {
+        let mut v = vec![];
+        v.extend(<[u8; 4]>::from(&self.header));
+        v
     }
 }

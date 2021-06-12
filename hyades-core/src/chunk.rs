@@ -714,6 +714,40 @@ impl Chunk for Abort {
         0                   1                   2                   3
         0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       |   Type = 7    | Chunk  Flags  |      Length = 8               |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       |                      Cumulative TSN Ack                       |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*/
+
+#[derive(Clone, Debug)]
+pub struct Shutdown {
+    header: ChunkHeader,
+    cumulative_tsn_ack: u32
+}
+
+impl Shutdown {
+    pub fn new(cumulative_tsn_ack: u32) -> Self {
+        Self {
+            header: ChunkHeader::new(7, 0, 8),
+            cumulative_tsn_ack
+        }
+    }
+}
+
+impl Chunk for Shutdown {
+    fn get_bytes(&self) -> Vec<u8> {
+        let mut v = vec![];
+        v.extend(<[u8; 4]>::from(&self.header));
+        v.extend(self.cumulative_tsn_ack.to_be_bytes());
+        v
+    }
+}
+
+/*
+        0                   1                   2                   3
+        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
        |   Type = 14   |Reserved     |T|      Length = 4               |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */

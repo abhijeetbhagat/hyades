@@ -36,6 +36,7 @@ pub struct Association {
     rto: u64,
     largest_tsn: u32,
     remote_rwnd: u32,
+    mtu: u8
 }
 
 impl Association {
@@ -68,6 +69,7 @@ impl Association {
             rto: RTO_INITIAL * 1000,
             largest_tsn: 0,
             remote_rwnd: 0,
+            mtu: 1500 // TODO abhi - perform proper pmtud to figure this value
         };
 
         association.start_sender_4_way_handshake().await?;
@@ -96,6 +98,7 @@ impl Association {
             rto: RTO_INITIAL * 1000,
             largest_tsn: 0,
             remote_rwnd: 0,
+            mtu: 1500 // TODO abhi - perform proper pmtud to figure this value
         };
 
         association.start_recvr_4_way_handshake().await?;

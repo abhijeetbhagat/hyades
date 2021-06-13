@@ -748,6 +748,33 @@ impl Chunk for Shutdown {
         0                   1                   2                   3
         0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       |   Type = 8    |Chunk  Flags   |      Length = 4               |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*/
+
+#[derive(Clone, Debug)]
+pub struct ShutdownAck {
+    header: ChunkHeader
+}
+
+impl ShutdownAck {
+    pub fn new() -> Self {
+        Self {
+            header: ChunkHeader::new(8, 0, 4)
+        }
+    }
+}
+
+impl Chunk for ShutdownAck {
+    fn get_bytes(&self) -> Vec<u8> {
+        <[u8; 4]>::from(&self.header).into()
+    }
+}
+
+/*
+        0                   1                   2                   3
+        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
        |   Type = 14   |Reserved     |T|      Length = 4               |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */

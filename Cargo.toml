@@ -19,7 +19,6 @@ structopt = "0.3.21"
 log = "0.4.14"
 env_logger = "0.8.3"
 tokio = { version = "1.5.0", features = ["rt", "macros"] }
-pnet = "0.28.0"
 
 [[bin]]
 name = "endpoint"

@@ -8,6 +8,7 @@ use rand::{rngs::ThreadRng, thread_rng, Rng};
 use std::collections::VecDeque;
 use std::net::SocketAddr;
 use tokio::time::{sleep, timeout, Duration};
+use herschel::pmtud::Pmtud;
 
 const RTO_INITIAL: u64 = 3;
 const RTO_MIN: u8 = 1;
@@ -36,7 +37,7 @@ pub struct Association {
     rto: u64,
     largest_tsn: u32,
     remote_rwnd: u32,
-    mtu: u8
+    mtu: u16
 }
 
 impl Association {
@@ -55,6 +56,12 @@ impl Association {
             .map_err(|_| SCTPError::InvalidRemoteAddress)?;
 
         let stream = Stream::new(local_addr).await?.connect(remote_addr).await?;
+        
+        let pmtud = Pmtud::new(local_addr.parse().unwrap(), remote_addr.parse().unwrap());
+        let mtu = match pmtud.discover() {
+            Ok(mtu) => mtu,
+            _ => 1500
+        };
 
         let mut association = Self {
             id: "nra".to_owned(),
@@ -69,7 +76,7 @@ impl Association {
             rto: RTO_INITIAL * 1000,
             largest_tsn: 0,
             remote_rwnd: 0,
-            mtu: 1500 // TODO abhi - perform proper pmtud to figure this value
+            mtu
         };
 
         association.start_sender_4_way_handshake().await?;
@@ -85,6 +92,13 @@ impl Association {
 
         let stream = Stream::new(local_addr).await?;
 
+        let pmtud = Pmtud::new(local_addr.parse().unwrap(), remote_addr.parse().unwrap());
+        let mtu = match pmtud.discover() {
+            Ok(mtu) => mtu,
+            _ => 1500
+        };
+
+
         let mut association = Self {
             id: "nra".to_owned(),
             stream,
@@ -98,7 +112,7 @@ impl Association {
             rto: RTO_INITIAL * 1000,
             largest_tsn: 0,
             remote_rwnd: 0,
-            mtu: 1500 // TODO abhi - perform proper pmtud to figure this value
+            mtu
         };
 
         association.start_recvr_4_way_handshake().await?;

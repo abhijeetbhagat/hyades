@@ -37,7 +37,7 @@ pub struct Association {
     rto: u64,
     largest_tsn: u32,
     remote_rwnd: u32,
-    mtu: u16
+    mtu: Option<u16>
 }
 
 impl Association {
@@ -55,14 +55,16 @@ impl Association {
             .parse()
             .map_err(|_| SCTPError::InvalidRemoteAddress)?;
 
-        let stream = Stream::new(local_addr).await?.connect(remote_addr).await?;
-        
-        let pmtud = Pmtud::new(local_addr.parse().unwrap(), remote_addr.parse().unwrap());
-        let mtu = match pmtud.discover() {
-            Ok(mtu) => mtu,
-            _ => 1500
+        let mtu = match Pmtud::new(local_addr.as_ref().parse().unwrap(), remote_addr.as_ref().parse().unwrap()) {
+            Ok(mut pmtud) => match pmtud.discover() {
+                            Ok(mtu) => Some(mtu),
+                            _ => Some(1500)
+                        },
+            _ => None
         };
 
+        let stream = Stream::new(local_addr).await?.connect(remote_addr).await?;
+        
         let mut association = Self {
             id: "nra".to_owned(),
             stream,
@@ -76,7 +78,7 @@ impl Association {
             rto: RTO_INITIAL * 1000,
             largest_tsn: 0,
             remote_rwnd: 0,
-            mtu
+            mtu 
         };
 
         association.start_sender_4_way_handshake().await?;
@@ -92,13 +94,6 @@ impl Association {
 
         let stream = Stream::new(local_addr).await?;
 
-        let pmtud = Pmtud::new(local_addr.parse().unwrap(), remote_addr.parse().unwrap());
-        let mtu = match pmtud.discover() {
-            Ok(mtu) => mtu,
-            _ => 1500
-        };
-
-
         let mut association = Self {
             id: "nra".to_owned(),
             stream,
@@ -112,7 +107,7 @@ impl Association {
             rto: RTO_INITIAL * 1000,
             largest_tsn: 0,
             remote_rwnd: 0,
-            mtu
+            mtu: None // we dont know what this is yet!
         };
 
         association.start_recvr_4_way_handshake().await?;
@@ -289,7 +284,7 @@ impl Association {
     }
 
     /// Non-graceful termination of the association
-    pub async fn abort(&mut self) {
+    pub async fn abort(&mut self) -> Result<(), SCTPError> {
         // TODO: abhi -
         // 1. destroy local msg queue
         let _ = self.msg_queue.drain(..);
@@ -300,8 +295,10 @@ impl Association {
             self.remote_addr.as_ref().unwrap().port(),
         );
 
-        packet.add_chunk(Box::new(Abort::new()));
+        // TODO abhi - pass a list of errors when creating the ABORT chunk
+        packet.add_chunk(Box::new(Abort::new(None)));
 
         self.stream.send(&Vec::<u8>::from(&packet)).await?;
+        Ok(())
     }
 }

@@ -64,7 +64,7 @@ impl SCTPEndpoint {
     }
 
     /// Abort an association
-    pub async fn abort(&self) {
+    pub async fn abort(&mut self) {
         let _ = self.association.abort().await;
     }
 
@@ -77,7 +77,8 @@ impl SCTPEndpoint {
 
     pub async fn receive(&self) -> Vec<u8> {
         // TODO: abhi - pop message from association's queue
-        let packet = self.association.msg_queue.pop();
+        // let packet = self.association.msg_queue.pop_front();
+        todo!()
     }
 
     pub fn status(&self) {}

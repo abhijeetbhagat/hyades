@@ -1,6 +1,7 @@
 use crate::cookie::Cookie;
 use rand::{thread_rng, Rng};
 use std::convert::TryFrom;
+use std::fmt::Debug;
 
 #[derive(Clone, Debug)]
 enum ChunkType {
@@ -10,11 +11,9 @@ enum ChunkType {
     CookieEcho,
 }
 
-pub trait RawBytes {
+pub trait Chunk {
     fn get_bytes(&self) -> Vec<u8>;
 }
-
-pub trait Chunk : RawBytes {}
 
 impl From<&Box<dyn Chunk>> for Vec<u8> {
     fn from(b: &Box<dyn Chunk>) -> Self {
@@ -506,7 +505,9 @@ pub struct Sack {
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
-pub trait Cause : RawBytes {}
+pub trait Cause: Clone + Debug {
+    fn get_bytes(&self) -> Vec<u8>;
+}
 
 #[derive(Clone, Debug)]
 pub struct CauseHeader {
@@ -669,7 +670,7 @@ pub struct Error {
     errors: Vec<Box<dyn Cause>>
 }
 
-impl RawBytes for Error {
+impl Chunk for Error {
     fn get_bytes(&self) -> Vec<u8> {
         todo!()
     }

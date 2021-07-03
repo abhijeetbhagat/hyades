@@ -3,12 +3,12 @@ use crate::cookie::Cookie;
 use crate::error::SCTPError;
 use crate::packet::Packet;
 use crate::stream::Stream;
+use herschel::pmtud::Pmtud;
 use log::{debug, info};
 use rand::{rngs::ThreadRng, thread_rng, Rng};
-use std::collections::VecDeque;
 use std::net::SocketAddr;
+use std::{cmp, collections::VecDeque};
 use tokio::time::{sleep, timeout, Duration};
-use herschel::pmtud::Pmtud;
 
 const RTO_INITIAL: u64 = 3;
 const RTO_MIN: u8 = 1;
@@ -37,7 +37,9 @@ pub struct Association {
     rto: u64,
     largest_tsn: u32,
     remote_rwnd: u32,
-    mtu: Option<u16>
+    mtu: Option<u16>,
+    cwnd: Option<u16>,
+    ssthresh: Option<u16>,
 }
 
 impl Association {
@@ -55,16 +57,25 @@ impl Association {
             .parse()
             .map_err(|_| SCTPError::InvalidRemoteAddress)?;
 
-        let mtu = match Pmtud::new(local_addr.as_ref().parse().unwrap(), remote_addr.as_ref().parse().unwrap()) {
+        let (mtu, cwnd, ssthresh) = match Pmtud::new(
+            local_addr.as_ref().parse().unwrap(),
+            remote_addr.as_ref().parse().unwrap(),
+        ) {
             Ok(mut pmtud) => match pmtud.discover() {
-                            Ok(mtu) => Some(mtu),
-                            _ => Some(1500)
-                        },
-            _ => None
+                Ok(mtu) => (
+                    Some(mtu),
+                    // 7.2.1: cwnd should be min(4*MTU, max (2*MTU, 4380 bytes))
+                    Some(cmp::min(4 * mtu, cmp::max(2 * mtu, 4380))),
+                    // 7.2.1; initial value of ssthreshold can be anything
+                    Some(10000),
+                ), 
+                _ => (Some(1500), Some(1500)),
+            },
+            _ => (None, None, None),
         };
 
         let stream = Stream::new(local_addr).await?.connect(remote_addr).await?;
-        
+
         let mut association = Self {
             id: "nra".to_owned(),
             stream,
@@ -78,7 +89,9 @@ impl Association {
             rto: RTO_INITIAL * 1000,
             largest_tsn: 0,
             remote_rwnd: 0,
-            mtu 
+            mtu,
+            cwnd,
+            ssthresh,
         };
 
         association.start_sender_4_way_handshake().await?;
@@ -107,7 +120,12 @@ impl Association {
             rto: RTO_INITIAL * 1000,
             largest_tsn: 0,
             remote_rwnd: 0,
-            mtu: None // we dont know what this is yet!
+            mtu: None,  // we dont know what this is yet!
+            // 7.2.1: cwnd should be min(4*MTU, max (2*MTU, 4380 bytes))
+            // but we dont know what the mtu is yet!
+            cwnd: None, 
+            // 7.2.1; initial value of ssthreshold can be anything
+            ssthresh: Some(10000)
         };
 
         association.start_recvr_4_way_handshake().await?;
@@ -260,18 +278,19 @@ impl Association {
     /// Sends user data
     pub async fn send(&mut self, data: &[u8]) -> Result<(), SCTPError> {
         if self.remote_rwnd == 0 {
-            return Err(SCTPError::RemoteBufferFull)
+            return Err(SCTPError::RemoteBufferFull);
         }
 
         self.stream.send(data).await;
         match timeout(Duration::from_millis(self.rto), self.stream.recv()).await {
+            Ok(bytes) => {}
+            _ => {
+                // 6.3.3.  Handle T3-rtx Expiration E1)
+                self.cwnd = self.mtu;
 
-                Ok(bytes) => {
-                }
-                _ => {
-                    // 6.3.3.  Handle T3-rtx Expiration
-                    self.rto = self.rto * 2;
-                }
+                // 6.3.3.  Handle T3-rtx Expiration E2)
+                self.rto = self.rto * 2;
+            }
         }
 
         Ok(())
@@ -289,7 +308,7 @@ impl Association {
         // 1. destroy local msg queue
         let _ = self.msg_queue.drain(..);
         // 2. send ABORT chunk to peer
-        
+
         let mut packet = Packet::new(
             self.local_addr.port(),
             self.remote_addr.as_ref().unwrap().port(),

@@ -428,11 +428,7 @@ impl Data {
         // pad with 0s if data len not multiple of 4
         let unpadded_data_len = data.len();
         let diff = unpadded_data_len % 4;
-        let adjust =  if diff == 0 {
-            0
-        } else {
-            4 - diff
-        };
+        let adjust = if diff == 0 { 0 } else { 4 - diff };
         data.extend(std::iter::repeat(0).take(adjust));
 
         Self {
@@ -519,7 +515,7 @@ pub struct CauseHeader {
 pub struct InvalidStreamId {
     header: CauseHeader,
     id: u16,
-    reserved: u16
+    reserved: u16,
 }
 
 impl Cause for InvalidStreamId {
@@ -532,7 +528,7 @@ impl Cause for InvalidStreamId {
 pub struct MissingMandatoryParam {
     header: CauseHeader,
     num: u32,
-    params: Vec<ParamType>
+    params: Vec<ParamType>,
 }
 
 impl Cause for MissingMandatoryParam {
@@ -544,7 +540,7 @@ impl Cause for MissingMandatoryParam {
 #[derive(Clone, Debug)]
 pub struct StateCookieError {
     header: CauseHeader,
-    staleness_measure: u32
+    staleness_measure: u32,
 }
 
 impl Cause for StateCookieError {
@@ -566,7 +562,7 @@ impl Cause for OutOfResource {
 
 #[derive(Clone, Debug)]
 pub struct UnresolvableAddr {
-    header: CauseHeader
+    header: CauseHeader,
 }
 
 impl Cause for UnresolvableAddr {
@@ -577,7 +573,7 @@ impl Cause for UnresolvableAddr {
 
 #[derive(Clone, Debug)]
 pub struct UnrecognizedChunkType {
-    header: CauseHeader
+    header: CauseHeader,
 }
 
 impl Cause for UnrecognizedChunkType {
@@ -588,7 +584,7 @@ impl Cause for UnrecognizedChunkType {
 
 #[derive(Clone, Debug)]
 pub struct InvalidMandatoryParam {
-    header: CauseHeader
+    header: CauseHeader,
 }
 
 impl Cause for InvalidMandatoryParam {
@@ -599,7 +595,7 @@ impl Cause for InvalidMandatoryParam {
 
 #[derive(Clone, Debug)]
 pub struct UnrecognizedParams {
-    header: CauseHeader
+    header: CauseHeader,
 }
 
 impl Cause for UnrecognizedParams {
@@ -611,7 +607,7 @@ impl Cause for UnrecognizedParams {
 #[derive(Clone, Debug)]
 pub struct NoUserData {
     header: CauseHeader,
-    tsn: u32
+    tsn: u32,
 }
 
 impl Cause for NoUserData {
@@ -667,7 +663,7 @@ impl Cause for ProtocolViolation {
 #[derive(Clone, Debug)]
 pub struct Error {
     header: ChunkHeader,
-    errors: Vec<Box<dyn Cause>>
+    errors: Vec<Box<dyn Cause>>,
 }
 
 impl Chunk for Error {
@@ -691,14 +687,14 @@ impl Chunk for Error {
 #[derive(Clone, Debug)]
 pub struct Abort {
     header: ChunkHeader,
-    errors: Option<Vec<Error>>
+    errors: Option<Vec<Error>>,
 }
 
 impl Abort {
     pub fn new(errors: Option<Vec<Error>>) -> Self {
         Self {
-            header: ChunkHeader::new(6, 1, 4 + errors.as_ref().map_or(0, |v| *(&v.len()) as u16)),            
-            errors: None
+            header: ChunkHeader::new(6, 1, 4 + errors.as_ref().map_or(0, |v| *(&v.len()) as u16)),
+            errors: None,
         }
     }
 }
@@ -724,14 +720,14 @@ impl Chunk for Abort {
 #[derive(Clone, Debug)]
 pub struct Shutdown {
     header: ChunkHeader,
-    cumulative_tsn_ack: u32
+    cumulative_tsn_ack: u32,
 }
 
 impl Shutdown {
     pub fn new(cumulative_tsn_ack: u32) -> Self {
         Self {
             header: ChunkHeader::new(7, 0, 8),
-            cumulative_tsn_ack
+            cumulative_tsn_ack,
         }
     }
 }
@@ -755,13 +751,13 @@ impl Chunk for Shutdown {
 
 #[derive(Clone, Debug)]
 pub struct ShutdownAck {
-    header: ChunkHeader
+    header: ChunkHeader,
 }
 
 impl ShutdownAck {
     pub fn new() -> Self {
         Self {
-            header: ChunkHeader::new(8, 0, 4)
+            header: ChunkHeader::new(8, 0, 4),
         }
     }
 }
@@ -782,16 +778,15 @@ impl Chunk for ShutdownAck {
 
 #[derive(Clone, Debug)]
 pub struct ShutdownComplete {
-    header: ChunkHeader
+    header: ChunkHeader,
 }
 
 impl ShutdownComplete {
     pub fn new() -> Self {
         Self {
-            header: ChunkHeader::new(14, 1, 4)
+            header: ChunkHeader::new(14, 1, 4),
         }
     }
-
 }
 
 impl Chunk for ShutdownComplete {

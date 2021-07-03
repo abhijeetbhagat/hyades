@@ -1,4 +1,4 @@
-use hyades_core::chunk::{Init, Data, ParamType};
+use hyades_core::chunk::{Data, Init, ParamType};
 
 #[test]
 fn test_init_conversion() {
@@ -45,15 +45,15 @@ fn test_init_conversion_with_no_params() {
 
 #[test]
 fn test_data_chunk() {
-    let chunk = Data::new(0, 1, 1, 0, true, false, vec![1,2,3]);
+    let chunk = Data::new(0, 1, 1, 0, true, false, vec![1, 2, 3]);
     assert!(chunk.data.len() == 4);
-    assert!(chunk.data == vec![1,2,3,0]);
+    assert!(chunk.data == vec![1, 2, 3, 0]);
 
-    let chunk = Data::new(0, 1, 1, 0, true, false, vec![1,2,3,4]);
+    let chunk = Data::new(0, 1, 1, 0, true, false, vec![1, 2, 3, 4]);
     assert!(chunk.data.len() == 4);
-    assert!(chunk.data == vec![1,2,3,4]);
+    assert!(chunk.data == vec![1, 2, 3, 4]);
 
-    let chunk = Data::new(0, 1, 1, 0, true, false, vec![1,2,3,4]);
+    let chunk = Data::new(0, 1, 1, 0, true, false, vec![1, 2, 3, 4]);
     assert!(chunk.data.len() == 4);
-    assert!(chunk.data == vec![1,2,3,4]);
+    assert!(chunk.data == vec![1, 2, 3, 4]);
 }

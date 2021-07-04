@@ -282,18 +282,37 @@ impl Association {
         }
 
         self.stream.send(data).await;
+
+        // 6.3.3 handle T3-rtx-Expiration
         match timeout(Duration::from_millis(self.rto), self.stream.recv()).await {
             Ok(bytes) => {}
             _ => {
                 // 6.3.3.  Handle T3-rtx Expiration E1)
+                self.ssthresh = cmp::max(self.cwnd / 2, 4 * self.mtu);
                 self.cwnd = self.mtu;
 
                 // 6.3.3.  Handle T3-rtx Expiration E2)
                 self.rto = self.rto * 2;
+                
+                // 6.3.3.  Handle T3-rtx Expiration E3)
+                // TODO abhi: handle this case
             }
         }
 
         Ok(())
+    }
+
+    /// Recvs user data
+    pub async fn recv(&mut self) {
+        // this is the association recving function. it can recv any kind of a chunk.
+        // it can recv data/error/abort/whatever. so every packet recvd should be
+        // checked for the chunk type and then appropriate action should be taken.
+        //
+        // TODO abhi: when the recvr wnd is 0, drop any new incoming DATA chunk with
+        // TSN larger than the largest TSN recvd so far.
+        if let Ok(packet) = self.stream.recv().await {
+
+        }
     }
 
     /// Graceful termination of the association

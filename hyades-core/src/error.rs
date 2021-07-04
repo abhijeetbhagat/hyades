@@ -26,4 +26,6 @@ pub enum SCTPError {
     CookieMismatchError,
     #[error("remote buffer is full")]
     RemoteBufferFull,
+    #[error("packet parsing failed")]
+    InvalidSCTPPacket,
 }

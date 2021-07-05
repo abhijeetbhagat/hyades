@@ -68,8 +68,8 @@ impl Association {
                     Some(cmp::min(4 * mtu, cmp::max(2 * mtu, 4380))),
                     // 7.2.1; initial value of ssthreshold can be anything
                     Some(10000),
-                ), 
-                _ => (Some(1500), Some(1500)),
+                ),
+                _ => (Some(1500), Some(1500), Some(10000)),
             },
             _ => (None, None, None),
         };
@@ -120,12 +120,12 @@ impl Association {
             rto: RTO_INITIAL * 1000,
             largest_tsn: 0,
             remote_rwnd: 0,
-            mtu: None,  // we dont know what this is yet!
+            mtu: None, // we dont know what this is yet!
             // 7.2.1: cwnd should be min(4*MTU, max (2*MTU, 4380 bytes))
             // but we dont know what the mtu is yet!
-            cwnd: None, 
+            cwnd: None,
             // 7.2.1; initial value of ssthreshold can be anything
-            ssthresh: Some(10000)
+            ssthresh: Some(10000),
         };
 
         association.start_recvr_4_way_handshake().await?;
@@ -288,12 +288,12 @@ impl Association {
             Ok(bytes) => {}
             _ => {
                 // 6.3.3.  Handle T3-rtx Expiration E1)
-                self.ssthresh = cmp::max(self.cwnd / 2, 4 * self.mtu);
+                self.ssthresh = Some(cmp::max(self.cwnd.unwrap() / 2, 4 * self.mtu.unwrap()));
                 self.cwnd = self.mtu;
 
                 // 6.3.3.  Handle T3-rtx Expiration E2)
                 self.rto = self.rto * 2;
-                
+
                 // 6.3.3.  Handle T3-rtx Expiration E3)
                 // TODO abhi: handle this case
             }
@@ -310,9 +310,7 @@ impl Association {
         //
         // TODO abhi: when the recvr wnd is 0, drop any new incoming DATA chunk with
         // TSN larger than the largest TSN recvd so far.
-        if let Ok(packet) = self.stream.recv().await {
-
-        }
+        if let Ok(packet) = self.stream.recv().await {}
     }
 
     /// Graceful termination of the association

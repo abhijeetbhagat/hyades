@@ -21,6 +21,18 @@ impl From<&Box<dyn Chunk>> for Vec<u8> {
     }
 }
 
+/*
+        0                   1                   2                   3
+        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       |   Chunk Type  | Chunk  Flags  |        Chunk Length           |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       \                                                               \
+       /                          Chunk Value                          /
+       \                                                               \
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*/
+
 #[derive(Clone, Debug)]
 pub struct ChunkHeader {
     chunk_type: u8,
@@ -188,6 +200,24 @@ impl From<Vec<u8>> for Init {
     }
 }
 
+impl From<&[u8]> for Init {
+    fn from(buf: &[u8]) -> Self {
+        Self {
+            header: ChunkHeader::new(
+                buf[0],
+                buf[1],
+                u16::from_be_bytes(<[u8; 2]>::try_from(&buf[2..=3]).unwrap()),
+            ),
+            init_tag: u32::from_be_bytes(<[u8; 4]>::try_from(&buf[4..=7]).unwrap()),
+            a_rwnd: u32::from_be_bytes(<[u8; 4]>::try_from(&buf[8..=11]).unwrap()),
+            num_ob_streams: u16::from_be_bytes(<[u8; 2]>::try_from(&buf[12..=13]).unwrap()),
+            num_ib_streams: u16::from_be_bytes(<[u8; 2]>::try_from(&buf[14..=15]).unwrap()),
+            init_tsn: u32::from_be_bytes(<[u8; 4]>::try_from(&buf[16..=19]).unwrap()),
+            optional_params: parse_optional_params(&buf, 20),
+        }
+    }
+}
+
 impl Chunk for Init {
     fn get_bytes(&self) -> Vec<u8> {
         let mut v = vec![];
@@ -205,6 +235,26 @@ impl Chunk for Init {
         v
     }
 }
+
+/*
+        0                   1                   2                   3
+        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       |   Type = 2    |  Chunk Flags  |      Chunk Length             |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       |                         Initiate Tag                          |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       |              Advertised Receiver Window Credit                |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       |  Number of Outbound Streams   |  Number of Inbound Streams    |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       |                          Initial TSN                          |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       \                                                               \
+       /              Optional/Variable-Length Parameters              /
+       \                                                               \
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*/
 
 #[derive(Clone, Debug)]
 pub struct InitAck {
@@ -241,6 +291,24 @@ impl InitAck {
 
 impl From<Vec<u8>> for InitAck {
     fn from(buf: Vec<u8>) -> Self {
+        Self {
+            header: ChunkHeader::new(
+                buf[0],
+                buf[1],
+                u16::from_be_bytes(<[u8; 2]>::try_from(&buf[2..=3]).unwrap()),
+            ),
+            init_tag: u32::from_be_bytes(<[u8; 4]>::try_from(&buf[4..=7]).unwrap()),
+            a_rwnd: u32::from_be_bytes(<[u8; 4]>::try_from(&buf[8..=11]).unwrap()),
+            num_ob_streams: u16::from_be_bytes(<[u8; 2]>::try_from(&buf[12..=13]).unwrap()),
+            num_ib_streams: u16::from_be_bytes(<[u8; 2]>::try_from(&buf[14..=15]).unwrap()),
+            init_tsn: u32::from_be_bytes(<[u8; 4]>::try_from(&buf[16..=19]).unwrap()),
+            optional_params: parse_optional_params(&buf, 20),
+        }
+    }
+}
+
+impl From<&[u8]> for InitAck {
+    fn from(buf: &[u8]) -> Self {
         Self {
             header: ChunkHeader::new(
                 buf[0],
@@ -501,7 +569,7 @@ pub struct Sack {
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
-pub trait Cause: Clone + Debug {
+pub trait Cause: Debug {
     fn get_bytes(&self) -> Vec<u8>;
 }
 
@@ -660,7 +728,7 @@ impl Cause for ProtocolViolation {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Error {
     header: ChunkHeader,
     errors: Vec<Box<dyn Cause>>,
@@ -687,14 +755,14 @@ impl Chunk for Error {
 #[derive(Clone, Debug)]
 pub struct Abort {
     header: ChunkHeader,
-    errors: Option<Vec<Error>>,
+    // errors: Option<Vec<Error>>,
 }
 
 impl Abort {
     pub fn new(errors: Option<Vec<Error>>) -> Self {
         Self {
             header: ChunkHeader::new(6, 1, 4 + errors.as_ref().map_or(0, |v| *(&v.len()) as u16)),
-            errors: None,
+            // errors: None,
         }
     }
 }

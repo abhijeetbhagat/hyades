@@ -406,6 +406,19 @@ impl From<Vec<u8>> for CookieEcho {
     }
 }
 
+impl From<&[u8]> for CookieEcho {
+    fn from(buf: &[u8]) -> Self {
+        Self {
+            header: ChunkHeader::new(
+                buf[0],
+                buf[1],
+                u16::from_be_bytes(<[u8; 2]>::try_from(&buf[2..=3]).unwrap()),
+            ),
+            cookie: Cookie::from(&buf[4..]),
+        }
+    }
+}
+
 impl Chunk for CookieEcho {
     fn get_bytes(&self) -> Vec<u8> {
         let mut v = vec![];

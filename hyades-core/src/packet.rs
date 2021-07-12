@@ -1,4 +1,4 @@
-use crate::chunk::{Chunk, Init, InitAck};
+use crate::chunk::{Chunk, CookieEcho, Init, InitAck};
 use crate::error::SCTPError;
 use crc32c;
 use std::convert::TryFrom;
@@ -92,6 +92,13 @@ impl TryFrom<Vec<u8>> for Packet {
                         <[u8; 2]>::try_from(&raw_data[offset + 3..=offset + 4]).unwrap(),
                     ) as usize;
                     chunks.push(Box::new(InitAck::from(&raw_data[offset..len])));
+                    offset += len;
+                }
+                10 => {
+                    let len = u16::from_be_bytes(
+                        <[u8; 2]>::try_from(&raw_data[offset + 3..=offset + 4]).unwrap(),
+                    ) as usize;
+                    chunks.push(Box::new(CookieEcho::from(&raw_data[offset..len])));
                     offset += len;
                 }
                 _ => return Err(SCTPError::InvalidSCTPPacket),

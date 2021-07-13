@@ -453,6 +453,18 @@ impl From<Vec<u8>> for CookieAck {
     }
 }
 
+impl From<&[u8]> for CookieAck {
+    fn from(buf: &[u8]) -> Self {
+        Self {
+            header: ChunkHeader::new(
+                buf[0],
+                buf[1],
+                u16::from_be_bytes(<[u8; 2]>::try_from(&buf[2..=3]).unwrap()),
+            ),
+        }
+    }
+}
+
 impl Chunk for CookieAck {
     fn get_bytes(&self) -> Vec<u8> {
         <[u8; 4]>::from(&self.header).into()
@@ -525,7 +537,14 @@ impl Data {
 
 impl Chunk for Data {
     fn get_bytes(&self) -> Vec<u8> {
-        todo!()
+        let mut v = vec![];
+        v.extend(<[u8; 4]>::from(&self.header));
+        v.extend(&self.tsn.to_be_bytes());
+        v.extend(&self.stream_id.to_be_bytes());
+        v.extend(&self.stream_seq_no.to_be_bytes());
+        v.extend(&self.payload_proto_id.to_be_bytes());
+        v.extend(&self.data);
+        v
     }
 }
 
@@ -568,6 +587,31 @@ pub struct Sack {
     num_dup_tsns: u16,
     gap_ack_blk_starts_ends: Option<Vec<(u16, u16)>>,
     dup_tsns: Option<Vec<u32>>,
+}
+
+impl Chunk for Sack {
+    fn get_bytes(&self) -> Vec<u8> {
+        let mut v = vec![];
+        v.extend(<[u8; 4]>::from(&self.header));
+        v.extend(&self.cumulative_tsn_ack.to_be_bytes());
+        v.extend(&self.a_rwnd.to_be_bytes());
+        v.extend(&self.num_gap_ack_blocks.to_be_bytes());
+        v.extend(&self.num_dup_tsns.to_be_bytes());
+
+        if let Some(gap_ack_blk_starts_ends) = self.gap_ack_blk_starts_ends.as_ref() {
+            for (start, end) in gap_ack_blk_starts_ends {
+                v.extend(start.to_be_bytes());
+                v.extend(end.to_be_bytes());
+            }
+        }
+
+        if let Some(dup_tsns) = self.dup_tsns.as_ref() {
+            for dup_tsn in dup_tsns {
+                v.extend(dup_tsn.to_be_bytes());
+            }
+        }
+        v
+    }
 }
 
 /*

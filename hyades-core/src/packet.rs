@@ -1,4 +1,4 @@
-use crate::chunk::{Chunk, CookieAck, CookieEcho, Init, InitAck};
+use crate::chunk::{Data, Chunk, CookieAck, CookieEcho, Init, InitAck};
 use crate::error::SCTPError;
 use crc32c;
 use std::convert::TryFrom;

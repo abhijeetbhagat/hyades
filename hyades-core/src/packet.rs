@@ -80,6 +80,13 @@ impl TryFrom<Vec<u8>> for Packet {
 
         while offset < raw_data.len() {
             match raw_data[offset] {
+                0 => {
+                    let len = u16::from_be_bytes(
+                        <[u8; 2]>::try_from(&raw_data[offset + 3..=offset + 4]).unwrap(),
+                    ) as usize;
+                    chunks.push(Box::new(Data::from(&raw_data[offset..len])));
+                    offset += len;
+                }
                 1 => {
                     let len = u16::from_be_bytes(
                         <[u8; 2]>::try_from(&raw_data[offset + 3..=offset + 4]).unwrap(),

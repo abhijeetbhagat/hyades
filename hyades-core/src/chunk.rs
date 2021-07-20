@@ -13,6 +13,7 @@ enum ChunkType {
 
 pub trait Chunk {
     fn get_bytes(&self) -> Vec<u8>;
+    fn chunk_type(&self) -> ChunkType;
 }
 
 impl From<&Box<dyn Chunk>> for Vec<u8> {
@@ -587,6 +588,12 @@ pub struct Sack {
     num_dup_tsns: u16,
     gap_ack_blk_starts_ends: Option<Vec<(u16, u16)>>,
     dup_tsns: Option<Vec<u32>>,
+}
+
+impl Sack {
+    pub fn new() -> Self {
+
+    }
 }
 
 impl Chunk for Sack {

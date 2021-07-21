@@ -49,8 +49,8 @@ impl Default for CommonHeader {
 
 /// An SCTP Packet
 pub struct Packet {
-    header: CommonHeader,
-    chunks: Vec<Box<dyn Chunk>>,
+    pub header: CommonHeader,
+    pub chunks: Vec<Box<dyn Chunk>>,
 }
 
 impl From<&Packet> for Vec<u8> {

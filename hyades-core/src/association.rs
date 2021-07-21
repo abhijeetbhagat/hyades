@@ -8,6 +8,7 @@ use log::{debug, info};
 use rand::{rngs::ThreadRng, thread_rng, Rng};
 use std::net::SocketAddr;
 use std::{cmp, collections::VecDeque};
+use std::convert::TryFrom;
 use tokio::time::{sleep, timeout, Duration};
 
 const RTO_INITIAL: u64 = 3;
@@ -310,7 +311,25 @@ impl Association {
         //
         // TODO abhi: when the recvr wnd is 0, drop any new incoming DATA chunk with
         // TSN larger than the largest TSN recvd so far.
-        if let Ok(packet) = self.stream.recv().await {}
+        if let Ok(bytes) = self.stream.recv().await {
+            if let Ok(packet) = Packet::try_from(bytes) {
+                for chunk in packet.chunks {
+                    match chunk.chunk_type() {
+                        Data => { }
+                        Init => { }
+                        InitAck => { }
+                        Sack => {}
+                        Abort => {}
+                        Shutdown => {}
+                        CookieAck => { }
+                        CookieEcho => { }
+                        ShutdownComplete => {}
+                        ShutdownAck => {}
+                        Invalid => { }
+                    }
+                }
+            }
+        }
     }
 
     /// Graceful termination of the association

@@ -5,10 +5,35 @@ use std::fmt::Debug;
 
 #[derive(Clone, Debug)]
 enum ChunkType {
+    Data,
     Init,
     InitAck,
-    Data,
+    Sack,
+    Abort,
+    Shutdown,
     CookieEcho,
+    CookieAck,
+    ShutdownComplete,
+    ShutdownAck,
+    Invalid
+}
+
+impl From<u8> for ChunkType {
+    fn from(value: u8) -> Self {
+        match value {
+            0 => ChunkType::Data,
+            1 => ChunkType::Init,
+            2 => ChunkType::InitAck,
+            3 => ChunkType::Sack,
+            6 => ChunkType::Abort,
+            7 => ChunkType::Shutdown,
+            8 => ChunkType::ShutdownAck,
+            10 => ChunkType::CookieEcho,
+            11 => ChunkType::CookieAck,
+            14 => ChunkType::ShutdownComplete,
+            _ => ChunkType::Invalid
+        }
+    }
 }
 
 pub trait Chunk {
@@ -235,6 +260,10 @@ impl Chunk for Init {
         }
         v
     }
+
+    fn chunk_type(&self) -> ChunkType {
+        self.header.chunk_type.into()
+    }
 }
 
 /*
@@ -377,6 +406,10 @@ impl Chunk for InitAck {
         }
         v
     }
+
+    fn chunk_type(&self) -> ChunkType {
+        self.header.chunk_type.into()
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -427,6 +460,10 @@ impl Chunk for CookieEcho {
         v.extend(Vec::<u8>::from(&self.cookie));
         v
     }
+
+    fn chunk_type(&self) -> ChunkType {
+        self.header.chunk_type.into()
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -469,6 +506,10 @@ impl From<&[u8]> for CookieAck {
 impl Chunk for CookieAck {
     fn get_bytes(&self) -> Vec<u8> {
         <[u8; 4]>::from(&self.header).into()
+    }
+
+    fn chunk_type(&self) -> ChunkType {
+        self.header.chunk_type.into()
     }
 }
 
@@ -536,6 +577,25 @@ impl Data {
     }
 }
 
+impl From<&[u8]> for Data {
+    fn from(buf: &[u8]) -> Self {
+        Self {
+            header: ChunkHeader::new(
+                buf[0],
+                buf[1],
+                u16::from_be_bytes(<[u8; 2]>::try_from(&buf[2..=3]).unwrap()),
+            ),
+            tsn: u32::from_be_bytes(<[u8; 4]>::try_from(&buf[4..=7]).unwrap()),
+            stream_id: u16::from_be_bytes(<[u8; 2]>::try_from(&buf[7..=8]).unwrap()),
+            // stream_seq_no will be the same for
+            // fragments of the same msg
+            stream_seq_no: u16::from_be_bytes(<[u8; 2]>::try_from(&buf[9..=10]).unwrap()),
+            payload_proto_id: u32::from_be_bytes(<[u8; 4]>::try_from(&buf[11..=14]).unwrap()),
+            data: buf[15 ..].to_vec()
+        }
+    }
+}
+
 impl Chunk for Data {
     fn get_bytes(&self) -> Vec<u8> {
         let mut v = vec![];
@@ -546,6 +606,10 @@ impl Chunk for Data {
         v.extend(&self.payload_proto_id.to_be_bytes());
         v.extend(&self.data);
         v
+    }
+
+    fn chunk_type(&self) -> ChunkType {
+        self.header.chunk_type.into()
     }
 }
 
@@ -618,6 +682,10 @@ impl Chunk for Sack {
             }
         }
         v
+    }
+
+    fn chunk_type(&self) -> ChunkType {
+        self.header.chunk_type.into()
     }
 }
 
@@ -802,6 +870,10 @@ impl Chunk for Error {
     fn get_bytes(&self) -> Vec<u8> {
         todo!()
     }
+
+    fn chunk_type(&self) -> ChunkType {
+        self.header.chunk_type.into()
+    }
 }
 
 /*
@@ -837,6 +909,10 @@ impl Chunk for Abort {
         v.extend(<[u8; 4]>::from(&self.header));
         todo!()
     }
+
+    fn chunk_type(&self) -> ChunkType {
+        self.header.chunk_type.into()
+    }
 }
 
 /*
@@ -871,6 +947,10 @@ impl Chunk for Shutdown {
         v.extend(self.cumulative_tsn_ack.to_be_bytes());
         v
     }
+
+    fn chunk_type(&self) -> ChunkType {
+        self.header.chunk_type.into()
+    }
 }
 
 /*
@@ -897,6 +977,10 @@ impl ShutdownAck {
 impl Chunk for ShutdownAck {
     fn get_bytes(&self) -> Vec<u8> {
         <[u8; 4]>::from(&self.header).into()
+    }
+
+    fn chunk_type(&self) -> ChunkType {
+        self.header.chunk_type.into()
     }
 }
 
@@ -926,5 +1010,9 @@ impl Chunk for ShutdownComplete {
         let mut v = vec![];
         v.extend(<[u8; 4]>::from(&self.header));
         v
+    }
+
+    fn chunk_type(&self) -> ChunkType {
+        self.header.chunk_type.into()
     }
 }

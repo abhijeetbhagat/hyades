@@ -6,9 +6,9 @@ use crate::stream::Stream;
 use herschel::pmtud::Pmtud;
 use log::{debug, info};
 use rand::{rngs::ThreadRng, thread_rng, Rng};
+use std::convert::TryFrom;
 use std::net::SocketAddr;
 use std::{cmp, collections::VecDeque};
-use std::convert::TryFrom;
 use tokio::time::{sleep, timeout, Duration};
 
 const RTO_INITIAL: u64 = 3;
@@ -315,17 +315,17 @@ impl Association {
             if let Ok(packet) = Packet::try_from(bytes) {
                 for chunk in packet.chunks {
                     match chunk.chunk_type() {
-                        Data => { }
-                        Init => { }
-                        InitAck => { }
+                        Data => {}
+                        Init => {}
+                        InitAck => {}
                         Sack => {}
                         Abort => {}
                         Shutdown => {}
-                        CookieAck => { }
-                        CookieEcho => { }
+                        CookieAck => {}
+                        CookieEcho => {}
                         ShutdownComplete => {}
                         ShutdownAck => {}
-                        Invalid => { }
+                        Invalid => {}
                     }
                 }
             }

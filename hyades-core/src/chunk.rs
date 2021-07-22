@@ -15,7 +15,7 @@ enum ChunkType {
     CookieAck,
     ShutdownComplete,
     ShutdownAck,
-    Invalid
+    Invalid,
 }
 
 impl From<u8> for ChunkType {
@@ -31,7 +31,7 @@ impl From<u8> for ChunkType {
             10 => ChunkType::CookieEcho,
             11 => ChunkType::CookieAck,
             14 => ChunkType::ShutdownComplete,
-            _ => ChunkType::Invalid
+            _ => ChunkType::Invalid,
         }
     }
 }
@@ -300,13 +300,20 @@ pub struct InitAck {
 impl InitAck {
     pub fn new(init: Init) -> Self {
         Self {
-            header: ChunkHeader::new(2, 0, 20),
+            header: ChunkHeader::new(
+                2,
+                0,
+                20 + init
+                    .optional_params
+                    .as_ref()
+                    .map_or(0, |v| *(&v.len()) as u16),
+            ),
             init_tag: init.init_tag,
             a_rwnd: init.a_rwnd,
             num_ob_streams: init.num_ob_streams,
             num_ib_streams: init.num_ib_streams,
             init_tsn: thread_rng().gen_range(0..=4294967295),
-            optional_params: None,
+            optional_params: init.optional_params,
         }
     }
 
@@ -591,7 +598,7 @@ impl From<&[u8]> for Data {
             // fragments of the same msg
             stream_seq_no: u16::from_be_bytes(<[u8; 2]>::try_from(&buf[9..=10]).unwrap()),
             payload_proto_id: u32::from_be_bytes(<[u8; 4]>::try_from(&buf[11..=14]).unwrap()),
-            data: buf[15 ..].to_vec()
+            data: buf[15..].to_vec(),
         }
     }
 }
@@ -655,8 +662,30 @@ pub struct Sack {
 }
 
 impl Sack {
-    pub fn new() -> Self {
-
+    pub fn new(
+        cumulative_tsn_ack: u32,
+        a_rwnd: u32,
+        num_gap_ack_blocks: u16,
+        num_dup_tsns: u16,
+        gap_ack_blk_starts_ends: Option<Vec<(u16, u16)>>,
+        dup_tsns: Option<Vec<u32>>,
+    ) -> Self {
+        Self {
+            header: ChunkHeader::new(
+                3,
+                0,
+                16 + gap_ack_blk_starts_ends
+                    .as_ref()
+                    .map_or(0, |v| (*(&v.len()) * 4) as u16)
+                    + dup_tsns.as_ref().map_or(0, |v| (*(&v.len()) * 4) as u16),
+            ),
+            cumulative_tsn_ack,
+            a_rwnd,
+            num_gap_ack_blocks,
+            num_dup_tsns,
+            gap_ack_blk_starts_ends,
+            dup_tsns,
+        }
     }
 }
 

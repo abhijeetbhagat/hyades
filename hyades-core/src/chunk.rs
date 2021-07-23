@@ -4,7 +4,7 @@ use std::convert::TryFrom;
 use std::fmt::Debug;
 
 #[derive(Clone, Debug)]
-enum ChunkType {
+pub enum ChunkType {
     Data,
     Init,
     InitAck,

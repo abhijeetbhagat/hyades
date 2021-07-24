@@ -129,6 +129,7 @@ impl Packet {
         let mut header = CommonHeader::default();
         header.src_port = src_port;
         header.dst_port = dst_port;
+        // TODO abhi: init the verification tag
         let mut packet = Self {
             header,
             chunks: Vec::new(),

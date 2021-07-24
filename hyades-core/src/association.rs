@@ -1,4 +1,4 @@
-use crate::chunk::{Abort, CookieAck, CookieEcho, Init, InitAck, ParamType, Parameter};
+use crate::chunk::{Abort, CookieAck, CookieEcho, Data, Init, InitAck, ParamType, Parameter};
 use crate::cookie::Cookie;
 use crate::error::SCTPError;
 use crate::packet::Packet;
@@ -33,9 +33,12 @@ pub struct Association {
     pub msg_queue: VecDeque<Packet>,
     rng: ThreadRng,
     init_tag: u32,
+    stream_id: u16,
+    stream_seq_no: u16,
     max_retries: u8,
     max_init_retries: u8,
     rto: u64,
+    tsn: u32,
     largest_tsn: u32,
     remote_rwnd: u32,
     mtu: Option<u16>,
@@ -85,9 +88,13 @@ impl Association {
             local_addr: local_sockaddr,
             remote_addr: Some(remote_sockaddr),
             init_tag: 0,
+            // section 5.1.1: stream id can be between 0 to min(local OS, remote MIS)-1
+            stream_id: 0,
+            stream_seq_no: 0,
             max_retries: ASSOCIATION_MAX_RETRANS,
             max_init_retries: MAX_INIT_RETRANSMITS,
             rto: RTO_INITIAL * 1000,
+            tsn: 0,
             largest_tsn: 0,
             remote_rwnd: 0,
             mtu,
@@ -116,9 +123,13 @@ impl Association {
             local_addr: local_sockaddr,
             remote_addr: None,
             init_tag: 0,
+            // section 5.1.1: stream id can be between 0 to min(local OS, remote MIS)-1
+            stream_id: 0,
+            stream_seq_no: 0,
             max_retries: ASSOCIATION_MAX_RETRANS,
             max_init_retries: MAX_INIT_RETRANSMITS,
             rto: RTO_INITIAL * 1000,
+            tsn: 0,
             largest_tsn: 0,
             remote_rwnd: 0,
             mtu: None, // we dont know what this is yet!
@@ -277,12 +288,59 @@ impl Association {
     }
 
     /// Sends user data
-    pub async fn send(&mut self, data: &[u8]) -> Result<(), SCTPError> {
+    pub async fn send(&mut self, user_data: &[u8]) -> Result<(), SCTPError> {
+
+        // section 6.1 rule A)
         if self.remote_rwnd == 0 {
+            // TODO abhi: send a zero probe
             return Err(SCTPError::RemoteBufferFull);
         }
 
-        self.stream.send(data).await;
+        // if self.cwnd.as_ref().unwrap() > 0
+
+        // section 6 note 1)
+        let mtu = *self.mtu.as_ref().unwrap() as usize;
+
+        if user_data.len() > mtu {
+            // TODO abhi - fragment data into multiple chunks
+            let mtu_sized_chunks = user_data.chunks(mtu);
+            let len = mtu_sized_chunks.len();
+
+            for (i, mtu_sized_chunk) in mtu_sized_chunks.enumerate() {
+                let mut packet = Packet::new(
+                    self.local_addr.port(),
+                    self.remote_addr.as_ref().unwrap().port(),
+                );
+                packet.add_chunk(Box::new(Data::new(
+                    self.tsn,
+                    self.stream_id,
+                    self.stream_seq_no,
+                    0,
+                    i == 0,
+                    i == len - 1,
+                    mtu_sized_chunk.to_vec(),
+                )));
+
+                self.stream.send(&Vec::<u8>::from(&packet)).await?;
+            }
+        } else {
+            // we can send the entire user data in a single data chunk
+                let mut packet = Packet::new(
+                    self.local_addr.port(),
+                    self.remote_addr.as_ref().unwrap().port(),
+                );
+                packet.add_chunk(Box::new(Data::new(
+                    self.tsn,
+                    self.stream_id,
+                    self.stream_seq_no,
+                    0,
+                    true,
+                    true,
+                    user_data.to_vec(),
+                )));
+        }
+
+        self.stream_seq_no += 1 % 65535;
 
         // 6.3.3 handle T3-rtx-Expiration
         match timeout(Duration::from_millis(self.rto), self.stream.recv()).await {

@@ -300,10 +300,11 @@ impl Association {
 
         // section 6 note 1)
         let mtu = *self.mtu.as_ref().unwrap() as usize;
+        let payload_size = mtu - 20 - 12 - 16; // 20 bytes ip header +  12 bytes sctp packet header + 16 bytes Data chunk header
 
         if user_data.len() > mtu {
             // TODO abhi - fragment data into multiple chunks
-            let mtu_sized_chunks = user_data.chunks(mtu);
+            let mtu_sized_chunks = user_data.chunks(payload_size);
             let len = mtu_sized_chunks.len();
 
             for (i, mtu_sized_chunk) in mtu_sized_chunks.enumerate() {

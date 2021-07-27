@@ -1,4 +1,6 @@
-use crate::chunk::{Abort, CookieAck, CookieEcho, Data, Init, InitAck, ParamType, Parameter};
+use crate::chunk::{
+    Abort, ChunkType, CookieAck, CookieEcho, Data, Init, InitAck, ParamType, Parameter,
+};
 use crate::cookie::Cookie;
 use crate::error::SCTPError;
 use crate::packet::Packet;
@@ -289,7 +291,6 @@ impl Association {
 
     /// Sends user data
     pub async fn send(&mut self, user_data: &[u8]) -> Result<(), SCTPError> {
-
         // section 6.1 rule A)
         if self.remote_rwnd == 0 {
             // TODO abhi: send a zero probe
@@ -323,41 +324,66 @@ impl Association {
                 )));
 
                 self.stream.send(&Vec::<u8>::from(&packet)).await?;
+
+                // section 6.3.2: start retransmission timer
+                loop {
+                    match timeout(Duration::from_millis(self.rto), self.stream.recv()).await {
+                        Ok(bytes) => {
+                            if let Ok(packet) = Packet::try_from(bytes.unwrap()) {
+                                for chunk in packet.chunks {
+                                    match chunk.chunk_type() {
+                                        ChunkType::Data => {}
+                                        ChunkType::Init => {}
+                                        ChunkType::InitAck => {}
+                                        ChunkType::Sack => {
+                                            // TODO abhi: we are going to come out of the timer
+                                            // when we recv sack for the data we just
+                                            // transmitter/re-transmitted
+                                        }
+                                        ChunkType::Abort => {}
+                                        ChunkType::Shutdown => {}
+                                        ChunkType::CookieAck => {}
+                                        ChunkType::CookieEcho => {}
+                                        ChunkType::ShutdownComplete => {}
+                                        ChunkType::ShutdownAck => {}
+                                        ChunkType::Invalid => {}
+                                    }
+                                }
+                            }
+                        }
+                        _ => {
+                            // 6.3.3.  Handle T3-rtx Expiration E1)
+                            self.ssthresh =
+                                Some(cmp::max(self.cwnd.unwrap() / 2, 4 * self.mtu.unwrap()));
+                            self.cwnd = self.mtu;
+
+                            // 6.3.3.  Handle T3-rtx Expiration E2)
+                            self.rto = self.rto * 2;
+
+                            // 6.3.3.  Handle T3-rtx Expiration E3)
+                            // TODO abhi: handle this case
+                        }
+                    }
+                }
             }
         } else {
             // we can send the entire user data in a single data chunk
-                let mut packet = Packet::new(
-                    self.local_addr.port(),
-                    self.remote_addr.as_ref().unwrap().port(),
-                );
-                packet.add_chunk(Box::new(Data::new(
-                    self.tsn,
-                    self.stream_id,
-                    self.stream_seq_no,
-                    0,
-                    true,
-                    true,
-                    user_data.to_vec(),
-                )));
+            let mut packet = Packet::new(
+                self.local_addr.port(),
+                self.remote_addr.as_ref().unwrap().port(),
+            );
+            packet.add_chunk(Box::new(Data::new(
+                self.tsn,
+                self.stream_id,
+                self.stream_seq_no,
+                0,
+                true,
+                true,
+                user_data.to_vec(),
+            )));
         }
 
         self.stream_seq_no += 1 % 65535;
-
-        // 6.3.3 handle T3-rtx-Expiration
-        match timeout(Duration::from_millis(self.rto), self.stream.recv()).await {
-            Ok(bytes) => {}
-            _ => {
-                // 6.3.3.  Handle T3-rtx Expiration E1)
-                self.ssthresh = Some(cmp::max(self.cwnd.unwrap() / 2, 4 * self.mtu.unwrap()));
-                self.cwnd = self.mtu;
-
-                // 6.3.3.  Handle T3-rtx Expiration E2)
-                self.rto = self.rto * 2;
-
-                // 6.3.3.  Handle T3-rtx Expiration E3)
-                // TODO abhi: handle this case
-            }
-        }
 
         Ok(())
     }
@@ -374,17 +400,17 @@ impl Association {
             if let Ok(packet) = Packet::try_from(bytes) {
                 for chunk in packet.chunks {
                     match chunk.chunk_type() {
-                        Data => {}
-                        Init => {}
-                        InitAck => {}
-                        Sack => {}
-                        Abort => {}
-                        Shutdown => {}
-                        CookieAck => {}
-                        CookieEcho => {}
-                        ShutdownComplete => {}
-                        ShutdownAck => {}
-                        Invalid => {}
+                        ChunkType::Data => {}
+                        ChunkType::Init => {}
+                        ChunkType::InitAck => {}
+                        ChunkType::Sack => {}
+                        ChunkType::Abort => {}
+                        ChunkType::Shutdown => {}
+                        ChunkType::CookieAck => {}
+                        ChunkType::CookieEcho => {}
+                        ChunkType::ShutdownComplete => {}
+                        ChunkType::ShutdownAck => {}
+                        ChunkType::Invalid => {}
                     }
                 }
             }

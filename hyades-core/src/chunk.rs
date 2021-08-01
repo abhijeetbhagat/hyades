@@ -718,6 +718,56 @@ impl Chunk for Sack {
     }
 }
 
+impl From<Vec<u8>> for Sack {
+    fn from(buf: Vec<u8>) -> Self {
+        let header = ChunkHeader::new(
+            buf[0],
+            buf[1],
+            u16::from_be_bytes(<[u8; 2]>::try_from(&buf[2..=3]).unwrap()),
+        );
+        let cumulative_tsn_ack = u32::from_be_bytes(<[u8; 4]>::try_from(&buf[4..=7]).unwrap());
+        let a_rwnd = u32::from_be_bytes(<[u8; 4]>::try_from(&buf[8..=11]).unwrap());
+        let num_gap_ack_blocks = u16::from_be_bytes(<[u8; 2]>::try_from(&buf[12..=13]).unwrap());
+        let num_dup_tsns = u16::from_be_bytes(<[u8; 2]>::try_from(&buf[14..=15]).unwrap());
+        let mut offset = 16usize;
+        let gap_ack_blk_starts_ends = if num_gap_ack_blocks > 0 {
+            let mut gaps = vec![];
+            for _ in 0..num_gap_ack_blocks {
+                gaps.push((
+                    u16::from_be_bytes(<[u8; 2]>::try_from(&buf[offset..=offset + 1]).unwrap()),
+                    u16::from_be_bytes(<[u8; 2]>::try_from(&buf[offset + 2..=offset + 3]).unwrap()),
+                ));
+                offset += 4;
+            }
+            Some(gaps)
+        } else {
+            None
+        };
+
+        let dup_tsns = if num_dup_tsns > 0 {
+            let mut tsns = vec![];
+            for _ in 0..num_dup_tsns {
+                tsns.push(u32::from_be_bytes(
+                    <[u8; 4]>::try_from(&buf[offset..=offset + 4]).unwrap(),
+                ));
+                offset += 4;
+            }
+            Some(tsns)
+        } else {
+            None
+        };
+
+        Self {
+            header,
+            cumulative_tsn_ack,
+            a_rwnd,
+            num_gap_ack_blocks,
+            num_dup_tsns,
+            gap_ack_blk_starts_ends,
+            dup_tsns,
+        }
+    }
+}
 /*
         0                   1                   2                   3
         0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1

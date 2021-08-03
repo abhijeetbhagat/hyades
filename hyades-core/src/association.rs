@@ -1,6 +1,4 @@
-use crate::chunk::{
-    Abort, ChunkType, CookieAck, CookieEcho, Data, Init, InitAck, ParamType, Parameter,
-};
+use crate::chunk::{Abort, CookieAck, CookieEcho, Data, Init, InitAck, ParamType, Parameter, Sack};
 use crate::cookie::Cookie;
 use crate::error::SCTPError;
 use crate::packet::Packet;
@@ -332,21 +330,22 @@ impl Association {
                             if let Ok(packet) = Packet::try_from(bytes.unwrap()) {
                                 for chunk in packet.chunks {
                                     match chunk.chunk_type() {
-                                        ChunkType::Data => {}
-                                        ChunkType::Init => {}
-                                        ChunkType::InitAck => {}
-                                        ChunkType::Sack => {
-                                            // TODO abhi: we are going to come out of the timer
-                                            // when we recv sack for the data we just
-                                            // transmitter/re-transmitted
+                                        Data => {}
+                                        Init => {}
+                                        InitAck => {}
+                                        Sack => {
+                                            let sack = Sack::from(chunk.get_bytes());
+                                            if sack.cumulative_tsn_ack == self.tsn {
+                                                break;
+                                            }
                                         }
-                                        ChunkType::Abort => {}
-                                        ChunkType::Shutdown => {}
-                                        ChunkType::CookieAck => {}
-                                        ChunkType::CookieEcho => {}
-                                        ChunkType::ShutdownComplete => {}
-                                        ChunkType::ShutdownAck => {}
-                                        ChunkType::Invalid => {}
+                                        Abort => {}
+                                        Shutdown => {}
+                                        CookieAck => {}
+                                        CookieEcho => {}
+                                        ShutdownComplete => {}
+                                        ShutdownAck => {}
+                                        Invalid => {}
                                     }
                                 }
                             }

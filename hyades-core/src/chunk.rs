@@ -653,7 +653,7 @@ impl Chunk for Data {
 #[derive(Clone, Debug)]
 pub struct Sack {
     header: ChunkHeader,
-    cumulative_tsn_ack: u32,
+    pub cumulative_tsn_ack: u32,
     a_rwnd: u32,
     num_gap_ack_blocks: u16,
     num_dup_tsns: u16,

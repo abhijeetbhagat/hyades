@@ -307,84 +307,94 @@ impl Association {
             let len = mtu_sized_chunks.len();
 
             for (i, mtu_sized_chunk) in mtu_sized_chunks.enumerate() {
-                let mut packet = Packet::new(
-                    self.local_addr.port(),
-                    self.remote_addr.as_ref().unwrap().port(),
-                );
-                packet.add_chunk(Box::new(Data::new(
-                    self.tsn,
-                    self.stream_id,
-                    self.stream_seq_no,
-                    0,
-                    i == 0,
-                    i == len - 1,
-                    mtu_sized_chunk.to_vec(),
-                )));
-
-                self.stream.send(&Vec::<u8>::from(&packet)).await?;
-
-                // section 6.3.2: start retransmission timer
-                loop {
-                    match timeout(Duration::from_millis(self.rto), self.stream.recv()).await {
-                        Ok(bytes) => {
-                            if let Ok(packet) = Packet::try_from(bytes.unwrap()) {
-                                for chunk in packet.chunks {
-                                    match chunk.chunk_type() {
-                                        Data => {}
-                                        Init => {}
-                                        InitAck => {}
-                                        Sack => {
-                                            let sack = Sack::from(chunk.get_bytes());
-                                            if sack.cumulative_tsn_ack == self.tsn {
-                                                break;
-                                            }
-                                        }
-                                        Abort => {}
-                                        Shutdown => {}
-                                        CookieAck => {}
-                                        CookieEcho => {}
-                                        ShutdownComplete => {}
-                                        ShutdownAck => {}
-                                        Invalid => {}
-                                    }
-                                }
-                            }
-                        }
-                        _ => {
-                            // 6.3.3.  Handle T3-rtx Expiration E1)
-                            self.ssthresh =
-                                Some(cmp::max(self.cwnd.unwrap() / 2, 4 * self.mtu.unwrap()));
-                            self.cwnd = self.mtu;
-
-                            // 6.3.3.  Handle T3-rtx Expiration E2)
-                            self.rto = self.rto * 2;
-
-                            // 6.3.3.  Handle T3-rtx Expiration E3)
-                            // TODO abhi: handle this case
-                        }
-                    }
-                }
+                self.send_and_wait(i == 0, i == len - 1, mtu_sized_chunk);
             }
         } else {
             // we can send the entire user data in a single data chunk
-            let mut packet = Packet::new(
-                self.local_addr.port(),
-                self.remote_addr.as_ref().unwrap().port(),
-            );
-            packet.add_chunk(Box::new(Data::new(
-                self.tsn,
-                self.stream_id,
-                self.stream_seq_no,
-                0,
-                true,
-                true,
-                user_data.to_vec(),
-            )));
+            self.send_and_wait(true, true, user_data);
         }
 
         self.stream_seq_no += 1 % 65535;
 
         Ok(())
+    }
+
+    async fn send_and_wait(
+        &mut self,
+        start: bool,
+        end: bool,
+        payload: &[u8],
+    ) -> Result<(), SCTPError> {
+        let mut packet = Packet::new(
+            self.local_addr.port(),
+            self.remote_addr.as_ref().unwrap().port(),
+        );
+
+        self.tsn += 1;
+
+        packet.add_chunk(Box::new(Data::new(
+            self.tsn,
+            self.stream_id,
+            self.stream_seq_no,
+            0,
+            start,
+            end,
+            payload.to_vec(),
+        )));
+
+        self.stream.send(&Vec::<u8>::from(&packet)).await?;
+        self.wait_for_sack().await;
+        Ok(())
+    }
+
+    async fn wait_for_sack(&mut self) {
+        // section 6.3.2: start retransmission timer
+        loop {
+            match timeout(Duration::from_millis(self.rto), self.stream.recv()).await {
+                Ok(bytes) => {
+                    if let Ok(packet) = Packet::try_from(bytes.unwrap()) {
+                        for chunk in packet.chunks {
+                            match chunk.chunk_type() {
+                                Data => {}
+                                Init => {}
+                                InitAck => {}
+                                Sack => {
+                                    let sack = Sack::from(chunk.get_bytes());
+                                    if sack.cumulative_tsn_ack == self.tsn {
+                                        break;
+                                    }
+                                }
+                                Abort => {}
+                                Shutdown => {}
+                                CookieAck => {}
+                                CookieEcho => {}
+                                ShutdownComplete => {}
+                                ShutdownAck => {}
+                                Invalid => {}
+                            }
+                        }
+                    }
+                }
+                _ => {
+                    // 6.3.3.  Handle T3-rtx Expiration E1)
+                    self.ssthresh = Some(cmp::max(self.cwnd.unwrap() / 2, 4 * self.mtu.unwrap()));
+                    self.cwnd = self.mtu;
+
+                    // 6.3.3.  Handle T3-rtx Expiration E2)
+                    self.rto = self.rto * 2;
+
+                    // this is not mentioned in the rfc in the form of a clause
+                    // but in my opinion, it only makes sense to quit waiting
+                    // if the rto has reached/crossed its max value
+                    if (self.rto / 1000) > RTO_MAX.into() {
+                        break;
+                    }
+
+                    // 6.3.3.  Handle T3-rtx Expiration E3)
+                    // TODO abhi: handle this case
+                }
+            }
+        }
     }
 
     /// Recvs user data
@@ -399,17 +409,17 @@ impl Association {
             if let Ok(packet) = Packet::try_from(bytes) {
                 for chunk in packet.chunks {
                     match chunk.chunk_type() {
-                        ChunkType::Data => {}
-                        ChunkType::Init => {}
-                        ChunkType::InitAck => {}
-                        ChunkType::Sack => {}
-                        ChunkType::Abort => {}
-                        ChunkType::Shutdown => {}
-                        ChunkType::CookieAck => {}
-                        ChunkType::CookieEcho => {}
-                        ChunkType::ShutdownComplete => {}
-                        ChunkType::ShutdownAck => {}
-                        ChunkType::Invalid => {}
+                        Data => {}
+                        Init => {}
+                        InitAck => {}
+                        Sack => {}
+                        Abort => {}
+                        Shutdown => {}
+                        CookieAck => {}
+                        CookieEcho => {}
+                        ShutdownComplete => {}
+                        ShutdownAck => {}
+                        Invalid => {}
                     }
                 }
             }

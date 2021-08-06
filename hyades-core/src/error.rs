@@ -28,4 +28,6 @@ pub enum SCTPError {
     RemoteBufferFull,
     #[error("packet parsing failed")]
     InvalidSCTPPacket,
+    #[error("rtx timeout")]
+    RetransmissionTimeout,
 }

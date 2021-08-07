@@ -347,7 +347,7 @@ impl Association {
         Ok(())
     }
 
-    async fn wait_for_sack(&mut self) {
+    async fn wait_for_sack(&mut self) -> Result<(), SCTPError> {
         // section 6.3.2: start retransmission timer
         loop {
             match timeout(Duration::from_millis(self.rto), self.stream.recv()).await {
@@ -361,7 +361,7 @@ impl Association {
                                 Sack => {
                                     let sack = Sack::from(chunk.get_bytes());
                                     if sack.cumulative_tsn_ack == self.tsn {
-                                        break;
+                                        return Ok(());
                                     }
                                 }
                                 Abort => {}
@@ -387,7 +387,7 @@ impl Association {
                     // but in my opinion, it only makes sense to quit waiting
                     // if the rto has reached/crossed its max value
                     if (self.rto / 1000) > RTO_MAX.into() {
-                        break;
+                        return Err(SCTPError::RetransmissionTimeout);
                     }
 
                     // 6.3.3.  Handle T3-rtx Expiration E3)
